@@ -1,0 +1,210 @@
+<template>
+  <div class="page-background">
+    <div class="register-container">
+      <h1 class="title">注册</h1>
+      <van-form @submit="onSubmit" @failed="onFailed">
+        <!-- 账号输入框 -->
+        <van-field
+            v-model="form.username"
+            label="账号"
+            name="username"
+            placeholder="请输入账号"
+            required
+            class="custom-field"
+        />
+
+        <!-- 密码输入框 -->
+        <van-field
+            v-model="form.password"
+            type="password"
+            label="密码"
+            name="password"
+            placeholder="请输入密码"
+            required
+            class="custom-field"
+        />
+
+        <!-- 确认密码输入框 -->
+        <van-field
+            v-model="form.confirmPassword"
+            type="password"
+            label="确认密码"
+            name="confirmPassword"
+            placeholder="请再次输入密码"
+            required
+            class="custom-field"
+            :rules="[{ validator: validatePassword, message: '两次密码不一致' }]"
+        />
+
+        <!-- 邮箱输入框 -->
+        <van-field
+            v-model="form.email"
+            label="邮箱"
+            name="email"
+            placeholder="请输入邮箱"
+            required
+            class="custom-field"
+            :rules="[{ validator: validateEmail, message: '邮箱格式不正确' }]"
+        />
+
+        <!-- 验证码输入框 -->
+        <van-field
+            v-model="form.verificationCode"
+            label="验证码"
+            name="verificationCode"
+            placeholder="请输入验证码"
+            required
+            class="custom-field"
+        >
+          <template #button>
+            <van-button size="small" @click="onGetCode" :disabled="countdown > 0">
+              {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
+            </van-button>
+          </template>
+        </van-field>
+
+        <!-- 按钮 -->
+        <div class="button-group">
+          <van-button type="default" @click="goToLogin">返回登录</van-button>
+          <van-button type="primary" native-type="submit">确认注册</van-button>
+        </div>
+      </van-form>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import {ref} from 'vue';
+import {showToast} from "vant";
+
+const form = ref({
+  username: '',
+  password: '',
+  confirmPassword: '',
+  email: '',
+  verificationCode: '',
+});
+
+const countdown = ref(0); // 验证码倒计时
+
+// 验证两次密码是否一致
+const validatePassword = () => {
+  return form.value.password === form.value.confirmPassword;
+};
+
+// 验证是否为邮箱
+const validateEmail = (value: string): boolean => {
+  // 使用正则表达式校验邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(value);
+}
+
+// 获取验证码
+const onGetCode = () => {
+  if (countdown.value > 0) return;
+
+  showToast('验证码已发送');
+  countdown.value = 60;
+
+  // 模拟倒计时
+  const timer = setInterval(() => {
+    countdown.value -= 1;
+    if (countdown.value <= 0) {
+      clearInterval(timer);
+    }
+  }, 1000);
+};
+
+// 表单提交事件
+const onSubmit = (values: typeof form.value) => {
+  console.log('注册表单提交成功:', values);
+  showToast('注册成功！');
+};
+
+// 表单提交失败
+const onFailed = (error: any) => {
+  console.log('注册表单提交失败:', error);
+  showToast('请完善注册信息！');
+};
+
+// 返回登录页
+const goToLogin = () => {
+  showToast('跳转到登录页...');
+  // 实际项目中，这里可以通过 router 跳转
+};
+</script>
+
+<style scoped>
+/* 渐变背景 */
+.page-background {
+  background: linear-gradient(to bottom right, #36d1dc, #5b86e5);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 40px 16px; /* 防止内容直接贴到边缘 */
+  box-sizing: border-box; /* 包含 padding */
+}
+
+/* 注册容器，调整为响应式高度 */
+.register-container {
+  max-width: 400px;
+  width: 90%; /* 适配小屏幕 */
+  max-height: 90vh; /* 限制最大高度为视口的 90% */
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.7); /* 半透明背景 */
+  border-radius: 16px;
+  text-align: center;
+  overflow-y: auto; /* 超出高度时允许滚动 */
+}
+
+/* 屏幕过大时，动态调整注册框位置 */
+@media (min-height: 900px) {
+  .register-container {
+    margin-top: -100px;
+    max-height: 80vh; /* 进一步减少上下空白 */
+  }
+}
+
+@media (min-height: 1200px) {
+  .register-container {
+    margin-top: -200px;
+    max-height: 70vh; /* 适应超大屏幕 */
+  }
+}
+
+/* 标题样式 */
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+/* 输入框样式 */
+.custom-field {
+  margin-bottom: 20px;
+  border-radius: 20px;
+}
+
+.van-field__control {
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  background: #f7f7f7;
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.button-group .van-button {
+  font-size: 14px;
+  flex: 1;
+}
+</style>
