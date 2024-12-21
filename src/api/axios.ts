@@ -4,18 +4,14 @@ import router from "../router/router.ts";
 
 // 创建 axios 实例
 const instance = axios.create({
-    baseURL: 'https://localhost:8101', // 基础 URL
+    baseURL: 'https://192.168.1.166:8100', // 基础 URL
     timeout: 10000, // 请求超时时间
+    withCredentials: true
 });
 
 // 请求拦截器
 instance.interceptors.request.use(
     (config) => {
-        // 从本地存储中获取 token
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`; // 在请求头中添加 token
-        }
         return config;
     },
     (error) => {
@@ -42,7 +38,6 @@ instance.interceptors.response.use(
             const { status } = error.response;
             if (status === 401) {
                 showToast('登录已过期，请重新登录');
-                localStorage.removeItem('token');
                 router.push('/login'); // 跳转到登录页面
             } else if (status === 500) {
                 showToast('服务器错误，请稍后重试');

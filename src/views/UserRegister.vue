@@ -5,9 +5,9 @@
       <van-form @submit="onSubmit" @failed="onFailed">
         <!-- 账号输入框 -->
         <van-field
-            v-model="form.username"
+            v-model="form.userAccount"
             label="账号"
-            name="username"
+            name="userAccount"
             placeholder="请输入账号"
             required
             class="custom-field"
@@ -15,10 +15,10 @@
 
         <!-- 密码输入框 -->
         <van-field
-            v-model="form.password"
+            v-model="form.userPassword"
             type="password"
             label="密码"
-            name="password"
+            name="userPassword"
             placeholder="请输入密码"
             required
             class="custom-field"
@@ -26,10 +26,10 @@
 
         <!-- 确认密码输入框 -->
         <van-field
-            v-model="form.confirmPassword"
+            v-model="form.confirmUserPassword"
             type="password"
             label="确认密码"
-            name="confirmPassword"
+            name="confirmUserPassword"
             placeholder="请再次输入密码"
             required
             class="custom-field"
@@ -38,9 +38,9 @@
 
         <!-- 邮箱输入框 -->
         <van-field
-            v-model="form.email"
+            v-model="form.userEmail"
             label="邮箱"
-            name="email"
+            name="userEmail"
             placeholder="请输入邮箱"
             required
             class="custom-field"
@@ -49,7 +49,7 @@
 
         <!-- 验证码输入框 -->
         <van-field
-            v-model="form.verificationCode"
+            v-model="form.verifyCode"
             label="验证码"
             name="verificationCode"
             placeholder="请输入验证码"
@@ -78,18 +78,18 @@ import {ref} from 'vue';
 import {showToast} from "vant";
 
 const form = ref({
-  username: '',
-  password: '',
-  confirmPassword: '',
-  email: '',
-  verificationCode: '',
+  userAccount: '',
+  userPassword: '',
+  confirmUserPassword: '',
+  userEmail: '',
+  verifyCode: '',
 });
 
 const countdown = ref(0); // 验证码倒计时
 
 // 验证两次密码是否一致
 const validatePassword = () => {
-  return form.value.password === form.value.confirmPassword;
+  return form.value.userPassword === form.value.confirmUserPassword;
 };
 
 // 验证是否为邮箱

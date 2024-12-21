@@ -5,9 +5,9 @@
       <van-form @submit="onSubmit" @failed="onFailed">
         <!-- 账号输入框 -->
         <van-field
-            v-model="form.username"
+            v-model="form.userAccount"
             label="账号"
-            name="username"
+            name="userAccount"
             placeholder="请输入账号"
             required
             class="custom-field"
@@ -15,10 +15,10 @@
 
         <!-- 密码输入框 -->
         <van-field
-            v-model="form.password"
+            v-model="form.userPassword"
             type="password"
             label="密码"
-            name="password"
+            name="userPassword"
             placeholder="请输入密码"
             required
             class="custom-field"
@@ -45,8 +45,8 @@ import {showToast} from "vant";
 
 // 表单数据
 const form = ref({
-  username: '',
-  password: '',
+  userAccount: '',
+  userPassword: '',
 });
 
 // 表单提交事件
