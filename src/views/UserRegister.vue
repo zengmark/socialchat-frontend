@@ -57,7 +57,7 @@
             class="custom-field"
         >
           <template #button>
-            <van-button size="small" @click="onGetCode" :disabled="countdown > 0">
+            <van-button size="small" @click="getVerifyCode" :disabled="countdown > 0">
               {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
             </van-button>
           </template>
@@ -76,6 +76,7 @@
 <script setup lang="ts">
 import {ref} from 'vue';
 import {showToast} from "vant";
+import axios from '../api/axios.ts'
 
 const form = ref({
   userAccount: '',
@@ -100,19 +101,29 @@ const validateEmail = (value: string): boolean => {
 }
 
 // 获取验证码
-const onGetCode = () => {
+const getVerifyCode = async () => {
   if (countdown.value > 0) return;
 
-  showToast('验证码已发送');
-  countdown.value = 60;
+  const {confirmUserPassword, ...verifyCodeRequest} = form.value;
+  try {
+    const resp = await axios.post('/api/user/getVerifyCode', verifyCodeRequest);
+    if (resp.data.data === true) {
+      showToast('验证码已发送');
+      countdown.value = 60;
 
-  // 模拟倒计时
-  const timer = setInterval(() => {
-    countdown.value -= 1;
-    if (countdown.value <= 0) {
-      clearInterval(timer);
+      // 模拟倒计时
+      const timer = setInterval(() => {
+        countdown.value -= 1;
+        if (countdown.value <= 0) {
+          clearInterval(timer);
+        }
+      }, 1000);
+    } else {
+      showToast('验证码发送失败');
     }
-  }, 1000);
+  } catch (error) {
+    console.log("验证码获取失败", error);
+  }
 };
 
 // 表单提交事件
