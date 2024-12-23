@@ -25,10 +25,16 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(function (response) {
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
-    return response;
+    const {data} = response;
+    if(response.status !== 200 || data.code !== 0) {
+        showToast(data.message || '请求失败');
+        return Promise.reject(data);
+    }
+    return data;
 }, function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
+    showToast(error);
     return Promise.reject(error);
 });
 

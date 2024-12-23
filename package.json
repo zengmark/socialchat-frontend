@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "animate.css": "^4.1.1",
     "axios": "^1.7.9",
     "vant": "^4.9.9",
     "vue": "^3.5.13",

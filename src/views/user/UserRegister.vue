@@ -51,7 +51,7 @@
         <van-field
             v-model="form.verifyCode"
             label="验证码"
-            name="verificationCode"
+            name="verifyCode"
             placeholder="请输入验证码"
             required
             class="custom-field"
@@ -76,7 +76,8 @@
 <script setup lang="ts">
 import {ref} from 'vue';
 import {showToast} from "vant";
-import axios from '../api/axios.ts'
+import axios from '../../api/axios.ts'
+import {useRouter} from "vue-router";
 
 const form = ref({
   userAccount: '',
@@ -87,6 +88,8 @@ const form = ref({
 });
 
 const countdown = ref(0); // 验证码倒计时
+
+const router = useRouter();
 
 // 验证两次密码是否一致
 const validatePassword = () => {
@@ -107,7 +110,7 @@ const getVerifyCode = async () => {
   const {confirmUserPassword, ...verifyCodeRequest} = form.value;
   try {
     const resp = await axios.post('/api/user/getVerifyCode', verifyCodeRequest);
-    if (resp.data.data === true) {
+    if (resp.data === true) {
       showToast('验证码已发送');
       countdown.value = 60;
 
@@ -123,13 +126,25 @@ const getVerifyCode = async () => {
     }
   } catch (error) {
     console.log("验证码获取失败", error);
+    showToast('验证码发送失败');
   }
 };
 
 // 表单提交事件
-const onSubmit = (values: typeof form.value) => {
-  console.log('注册表单提交成功:', values);
-  showToast('注册成功！');
+const onSubmit = async (values: typeof form.value) => {
+  const {confirmUserPassword, ...userRegisterRequest} = values;
+  try {
+    const resp = await axios.post('/api/user/register', userRegisterRequest);
+    if (resp.data == true) {
+      showToast('注册成功！');
+      router.push('/login')
+    } else {
+      showToast('注册新用户失败，服务暂时不可用');
+    }
+  } catch (error: any) {
+    console.log("注册失败", error);
+    showToast('注册失败，' + error?.description)
+  }
 };
 
 // 表单提交失败
@@ -140,8 +155,7 @@ const onFailed = (error: any) => {
 
 // 返回登录页
 const goToLogin = () => {
-  showToast('跳转到登录页...');
-  // 实际项目中，这里可以通过 router 跳转
+  router.push('/login');
 };
 </script>
 

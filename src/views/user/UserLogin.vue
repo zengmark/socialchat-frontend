@@ -40,8 +40,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import {ref} from 'vue';
 import {showToast} from "vant";
+import axios from '../../api/axios.ts'
+import {useRouter} from "vue-router";
 
 // 表单数据
 const form = ref({
@@ -49,10 +51,15 @@ const form = ref({
   userPassword: '',
 });
 
+const router = useRouter();
+
 // 表单提交事件
-const onSubmit = (values: typeof form.value) => {
-  console.log('登录表单提交成功:', values);
+const onSubmit = async (values: typeof form.value) => {
+  console.log(values);
+  const resp = await axios.post('/api/user/login', values);
+  console.log(resp);
   showToast('登录成功！');
+  router.push('/');
 };
 
 // 表单提交失败
@@ -63,8 +70,7 @@ const onFailed = (error: any) => {
 
 // 跳转到注册页面
 const goToRegister = () => {
-  showToast('跳转到注册页面');
-  // 在实际项目中，可以使用 router.push('/register')
+  router.push('/register');
 };
 </script>
 
@@ -148,6 +154,7 @@ const goToRegister = () => {
   text-decoration: underline;
   font-weight: bold;
 }
+
 .link:hover {
   color: #0056b3;
 }
