@@ -1,4 +1,3 @@
-// src/composables/loading.ts
 import { ref } from 'vue';
 
 // 全局加载状态

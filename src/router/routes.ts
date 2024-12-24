@@ -1,14 +1,15 @@
 const routes = [
+    // 带布局的页面（统一布局）
     {
         path: '/',
-        name: 'Home',
-        component: () => import('../views/post/PostHome.vue'),
-    },
-    {
-        path: '/post/:id',
-        name: 'PostDetail',
-        component: () => import('../views/post/PostDetail.vue'),
-        props: true, // 允许通过路由参数传递帖子 ID
+        component: () => import('../components/BasicLayout.vue'), // 统一布局组件
+        children: [
+            {
+                path: '', // 默认子路由
+                name: 'PostHome',
+                component: () => import('../views/post/PostHome.vue'),
+            }
+        ],
     },
     {
         path: '/login',
@@ -19,6 +20,11 @@ const routes = [
         path: '/register',
         name: 'register',
         component: () => import('../views/user/UserRegister.vue')
+    },
+    {
+        path: '/postEdit', // 默认子路由
+        name: 'PostEdit',
+        component: () => import('../views/post/PostEdit.vue'),
     },
 ]
 
