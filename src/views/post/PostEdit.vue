@@ -32,7 +32,7 @@
           required
           class="custom-field"
       />
-      <p v-if="!form.title" class="error-text">标题为必填项</p>
+      <p/>
       <van-field
           v-model="form.content"
           type="textarea"
@@ -41,7 +41,6 @@
           placeholder="请输入内容"
           class="custom-field"
       />
-      <p v-if="!form.content" class="error-text">内容为必填项</p>
     </div>
 
     <!-- 功能选项 -->
@@ -55,10 +54,13 @@
       </div>
     </div>
 
+    <!-- 页面底部的填充 -->
+    <div class="page-bottom-padding"></div>
+
     <!-- 发布/存草稿 -->
     <div class="fixed-footer">
-      <van-button type="default" block @click="saveDraft">存草稿</van-button>
-      <van-button type="primary" block @click="submitPost">发布帖子</van-button>
+      <van-button class="footer-button" type="default" @click="saveDraft">存草稿</van-button>
+      <van-button class="footer-button" type="primary" @click="submitPost">发布帖子</van-button>
     </div>
 
     <!-- 投票弹框 -->
@@ -70,17 +72,20 @@
             placeholder="请输入投票标题"
             class="custom-field"
         />
-        <div v-for="(option, index) in vote.options" :key="index" class="vote-option">
-          <van-field
-              v-model="vote.options[index]"
-              placeholder="请输入选项内容"
-              class="custom-field"
-          />
-          <van-icon
-              name="delete"
-              class="delete-icon"
-              @click="deleteVoteOption(index)"
-          />
+        <div class="vote-option-list">
+          <div v-for="(option, index) in vote.options" :key="index" class="vote-option">
+            <span class="vote-option-title">选项 {{ index + 1 }}</span>
+            <van-field
+                v-model="vote.options[index]"
+                placeholder="请输入选项内容"
+                class="vote-option-input"
+            />
+            <van-icon
+                name="delete"
+                class="delete-icon"
+                @click="deleteVoteOption(index)"
+            />
+          </div>
         </div>
         <van-button type="primary" size="small" @click="addVoteOption">
           添加选项
@@ -94,23 +99,31 @@
     <!-- @用户弹框 -->
     <van-popup v-model:show="showMentionModal" position="bottom" class="mention-popup">
       <div class="mention-popup-content">
+        <!-- 搜索框 -->
         <van-field
             v-model="searchQuery"
             placeholder="请输入用户名"
             clearable
             @input="searchUsers"
+            class="mention-search"
         />
-        <div v-if="searchResults.length > 0">
-          <van-cell
-              v-for="user in searchResults"
-              :key="user.id"
-              :title="user.name"
-              @click="mentionUser(user)"
-          />
+
+        <!-- 搜索结果 -->
+        <div class="mention-results">
+          <div v-if="searchResults.length > 0">
+            <van-cell
+                v-for="user in searchResults"
+                :key="user.id"
+                :title="user.name"
+                @click="mentionUser(user)"
+            />
+          </div>
+          <div v-else class="no-results">
+            未找到相关用户
+          </div>
         </div>
-        <div v-else class="no-results">
-          未找到相关用户
-        </div>
+
+        <!-- 完成按钮 -->
         <van-button type="default" block @click="closeMentionModal">完成</van-button>
       </div>
     </van-popup>
@@ -119,7 +132,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { showToast } from 'vant';
+import {  } from 'vant';
 import { useRouter } from 'vue-router';
 
 // 路由
@@ -250,7 +263,11 @@ const submitPost = () => {
 .post-create-page {
   padding: 16px;
   background-color: #f9f9f9;
-  padding-bottom: 100px;
+  padding-bottom: 60px; /* 为固定按钮预留空间 */
+}
+
+.page-bottom-padding {
+  height: 60px; /* 与固定按钮高度一致 */
 }
 
 .custom-nav-bar {
@@ -284,21 +301,72 @@ const submitPost = () => {
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 92%;
+  width: 100%;
   background-color: #fff;
-  padding: 10px 16px;
+  padding: 10px;
   display: flex;
   gap: 12px;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000; /* 确保固定按钮层级最高 */
 }
 
+.vote-popup-content {
+  padding: 16px;
+  max-height: 66vh; /* 最大高度为屏幕的三分之二 */
+  overflow-y: auto;
+}
+
+.vote-option-list {
+  margin-bottom: 12px;
+}
+
+.vote-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.vote-option-title {
+  flex-shrink: 0;
+  width: 80px;
+  font-weight: bold;
+  color: #333;
+}
+
+.vote-option-input {
+  flex: 1;
+}
+
+.delete-icon {
+  color: red;
+  font-size: 20px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+
+/* @用户弹框 */
 .mention-popup-content {
   padding: 16px;
+  max-height: 66vh; /* 限制窗口最大高度为屏幕的三分之二 */
+  display: flex;
+  flex-direction: column;
+}
+
+.mention-search {
+  margin-bottom: 12px;
+}
+
+.mention-results {
+  flex: 1; /* 搜索结果区域占据剩余空间 */
+  overflow-y: auto;
+  padding-bottom: 12px; /* 给底部按钮预留空间 */
 }
 
 .no-results {
   text-align: center;
   color: #999;
-  margin: 16px 0;
+  margin: auto; /* 居中显示 */
+  font-size: 14px;
 }
 </style>

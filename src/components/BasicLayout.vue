@@ -26,7 +26,7 @@
     <van-tabbar fixed active-color="#07c160" v-model="activeTabBar">
       <van-tabbar-item @click="goTo('')" icon="home-o">首页</van-tabbar-item>
       <van-tabbar-item @click="goTo('hot')" icon="fire-o">热门</van-tabbar-item>
-      <van-tabbar-item @click="showActions" icon="plus" />
+      <van-tabbar-item @click="goTo('postEdit')" icon="plus" />
       <van-tabbar-item @click="goTo('message')" icon="chat-o" badge="99+">消息</van-tabbar-item>
       <van-tabbar-item @click="goTo('my')" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
@@ -40,7 +40,6 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const activeTab = ref('discover'); // 顶部导航栏选中项
 const activeTabBar = ref(0); // 底部导航栏选中项
-const showActionSheet = ref(false); // 控制 ActionSheet 是否显示
 
 // 切换顶部导航栏的选项
 const switchTab = (tab) => {
@@ -52,10 +51,6 @@ const goTo = (route) => {
   router.push(`/${route}`);
 };
 
-// 显示发帖、消息、我的菜单
-const showActions = () => {
-  showActionSheet.value = true;
-};
 </script>
 
 <style scoped>

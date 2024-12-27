@@ -1,22 +1,31 @@
 import axios from 'axios';
 import {showToast} from 'vant';
+import {getToken} from "../utils/auth.ts";
 // import router from "../router/router.ts";
 
 // 创建 axios 实例
 const instance = axios.create({
     baseURL: 'http://192.168.1.166:8100', // 基础 URL
     timeout: 10000, // 请求超时时间
+    headers: {
+        'Content-Type': 'application/json',
+    },
     withCredentials: true
 });
 
 // 请求拦截器
 instance.interceptors.request.use(
     (config) => {
+        const token = getToken();
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
         // 请求错误处理
         showToast('请求发送失败');
+        console.error('请求错误:', error);
         return Promise.reject(error);
     }
 );
@@ -26,8 +35,10 @@ instance.interceptors.response.use(function (response) {
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
     const {data} = response;
-    if(response.status !== 200 || data.code !== 0) {
-        showToast(data.message || '请求失败');
+    if (response.status !== 200 || data.code !== 0) {
+        const errorMsg = data.message || '请求失败';
+        showToast(errorMsg);
+        console.log(errorMsg)
         return Promise.reject(data);
     }
     return data;
@@ -35,6 +46,7 @@ instance.interceptors.response.use(function (response) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
     showToast(error);
+    console.log(error)
     return Promise.reject(error);
 });
 
