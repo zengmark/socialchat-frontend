@@ -16,6 +16,7 @@
           multiple
           :max-count="9"
           :preview-size="100"
+          :before-read="beforeRead"
           :after-read="handleAfterRead"
           @delete="deleteImage"
       />
@@ -39,6 +40,7 @@
           rows="5"
           label="内容"
           placeholder="请输入内容"
+          required
           class="custom-field"
       />
     </div>
@@ -132,8 +134,9 @@
 
 <script setup>
 import { ref } from 'vue';
-import {  } from 'vant';
 import { useRouter } from 'vue-router';
+import axios from '../../api/axios.ts'
+import {initWebSocket} from "../../services/imageWebsocket.ts";
 
 // 路由
 const router = useRouter();
@@ -147,6 +150,7 @@ const form = ref({
 
 // 图片数据
 const images = ref([]);
+const imageUrls = ref([]);
 
 // 投票数据
 const vote = ref({
@@ -226,13 +230,70 @@ const mentionUser = (user) => {
   closeMentionModal();
 };
 
+
+// 上传图片前校验
+const beforeRead = (file) => {
+  const isImage = file.type.startsWith('image/');
+  if (!isImage) {
+    showToast('仅支持上传图片文件');
+    return false;
+  }
+  const isUnderLimit = file.size / 1024 / 1024 < 5; // 文件大小限制为 5MB
+  if (!isUnderLimit) {
+    showToast('图片大小不能超过 5MB');
+    return false;
+  }
+  return true;
+};
+
 // 上传图片
-const handleAfterRead = (file) => {
+const handleAfterRead = async (file) => {
   if (images.value.length >= 9) {
     showToast('最多上传 9 张图片');
     return;
   }
-  images.value.push(file);
+  const formData = new FormData();
+  formData.append('file', file.file);
+  const sessionId = 'session-' + Math.random().toString(36).substr(2, 9); // 生成一个 sessionId
+
+  // 向后端上传图片
+  try {
+    const wsPromise = initWebSocket(sessionId);
+    await axios.post('/api/post/uploadPostImage', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      params: { sessionId }, // 将 sessionId 传递给后端
+    });
+    // 等待 WebSocket 返回结果
+    const imageUrl = await wsPromise;
+    console.log('WebSocket 返回的图片地址:', imageUrl)// const imageUrl = uploadResult.value.data;
+    imageUrls.value.push(imageUrl);
+    console.log(imageUrls.value);
+    showToast('图片上传成功')
+  } catch (error) {
+    console.error("图片上传失败", error);
+    showToast('图片上传失败');
+  }
+
+  // const formData = new FormData();
+  // formData.append('file', file.file);
+
+  // try {
+  //   // 向后端上传文件
+  //   const response = await axios.post('/api/upload', formData, {
+  //     headers: {
+  //       'Content-Type': 'multipart/form-data',
+  //     },
+  //   });
+  //
+  //   const imageUrl = response.data.url; // 后端返回的图片 URL
+  //   images.value.push(imageUrl);
+  //   showToast('图片上传成功');
+  // } catch (error) {
+  //   showToast('图片上传失败，请重试');
+  //   console.error('上传失败:', error);
+  // }
 };
 
 // 删除图片
