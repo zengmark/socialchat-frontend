@@ -48,11 +48,11 @@
     <!-- 功能选项 -->
     <div class="section features-section">
       <h3 class="section-title">功能项</h3>
-      <van-cell title="投票" is-link @click="toggleVoteModal" />
-      <van-cell title="@用户" is-link @click="toggleMentionModal" />
+      <van-cell title="投票" is-link @click="toggleVoteModal"/>
+      <van-cell title="@用户" is-link @click="toggleMentionModal"/>
       <div class="visibility-switch">
         <span>是否公开可见</span>
-        <van-switch v-model="form.isPublic" size="20px" />
+        <van-switch v-model="form.isPublic" size="20px"/>
       </div>
     </div>
 
@@ -133,10 +133,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import {ref, computed} from 'vue';
+import {useRouter} from 'vue-router';
 import axios from '../../api/axios.ts'
 import {initWebSocket} from "../../services/imageWebsocket.ts";
+import {useUserStore} from "../../stores/user.ts";
 
 // 路由
 const router = useRouter();
@@ -155,14 +156,32 @@ const imageUrls = ref([]);
 // 投票数据
 const vote = ref({
   title: '',
-  options: ['选项 1', '选项 2'],
+  options: ['', ''],
 });
+
+// 计算属性：hasVote
+const hasVote = computed(() => {
+  // 检查 title 是否非空
+  const hasTitle = vote.value.title.trim() !== '';
+
+  // 检查 options 是否至少有两个非空内容项
+  const validOptions = vote.value.options.filter(option => option.trim() !== '');
+  const hasValidOptions = validOptions.length >= 2;
+
+  // 满足条件时返回 true，否则返回 false
+  return hasTitle && hasValidOptions;
+});
+
+// @用户的数据
+const userAts = ref([]);
 
 // 搜索用户数据
 const showVoteModal = ref(false);
 const showMentionModal = ref(false);
 const searchQuery = ref('');
 const searchResults = ref([]);
+
+const userStore = useUserStore();
 
 // 返回上一页
 const goBack = () => {
@@ -189,7 +208,7 @@ const addVoteOption = () => {
     showToast('最多只能添加 10 个选项');
     return;
   }
-  vote.value.options.push(`选项 ${vote.value.options.length + 1}`);
+  vote.value.options.push('');
 };
 
 // 删除投票选项
@@ -218,7 +237,7 @@ const searchUsers = () => {
     return;
   }
   // 模拟搜索结果
-  searchResults.value = Array.from({ length: 5 }, (_, index) => ({
+  searchResults.value = Array.from({length: 5}, (_, index) => ({
     id: index + 1,
     name: `用户 ${searchQuery.value} ${index + 1}`,
   }));
@@ -229,7 +248,6 @@ const mentionUser = (user) => {
   form.value.content += ` @${user.name} `;
   closeMentionModal();
 };
-
 
 // 上传图片前校验
 const beforeRead = (file) => {
@@ -263,7 +281,7 @@ const handleAfterRead = async (file) => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      params: { sessionId }, // 将 sessionId 传递给后端
+      params: {sessionId}, // 将 sessionId 传递给后端
     });
     // 等待 WebSocket 返回结果
     const imageUrl = await wsPromise;
@@ -301,21 +319,56 @@ const deleteImage = (file) => {
   images.value = images.value.filter((image) => image !== file);
 };
 
+// 保存前置校验
+const judgeForm = () => {
+  return !(!form.value.title || !form.value.content || images.value.length === 0);
+}
+
+// 构造保存草稿态的请求数据
+const buildPostSaveRequest = async (visible) => {
+  const userInfo = await userStore.getUserInfo();
+  console.log("用户信息为", userInfo);
+  if (userInfo === null) {
+    showToast('用户未登录');
+    throw new Error('用户未登录');
+  }
+  const userId = userInfo.id;
+  return {
+    userId: userId,
+    postTitle: form.value.title,
+    postContent: form.value.content,
+    postPictureList: imageUrls.value,
+    visible: visible,
+    voteRequest: {
+      hasVote: hasVote.value,
+      voteTitle: vote.value.title,
+      voteItemList: vote.value.options
+    }
+  };
+}
+
 // 保存草稿
-const saveDraft = () => {
-  if (images.value.length === 0) {
-    showToast('请至少上传一张图片');
+const saveDraft = async () => {
+  if (!judgeForm()) {
+    showToast('请填写完整的帖子内容并上传至少一张图片');
     return;
   }
+  const postSaveRequest = await buildPostSaveRequest(1);
+  const resp = await axios.post('/api/post/save', postSaveRequest);
+  console.log(resp);
   showToast('草稿已保存');
 };
 
 // 发布帖子
-const submitPost = () => {
-  if (!form.value.title || !form.value.content || images.value.length === 0) {
+const submitPost = async () => {
+  if (!judgeForm()) {
     showToast('请填写完整的帖子内容并上传至少一张图片');
     return;
   }
+  const visible = form.value.isPublic ? 0 : 2;
+  const postSaveRequest = await buildPostSaveRequest(visible);
+  const resp = await axios.post('/api/post/save', postSaveRequest);
+  console.log(resp);
   showToast('帖子发布成功');
 };
 </script>

@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia';
+import {defineStore} from 'pinia';
 import axios from '../api/axios';
-import { getToken, removeToken } from '../utils/auth';
+import {getToken, removeToken} from '../utils/auth';
 import {useRouter} from "vue-router";
 import {showToast} from "vant";
 
