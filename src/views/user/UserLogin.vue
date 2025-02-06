@@ -45,6 +45,7 @@ import {showToast} from "vant";
 import axios from '../../api/axios.ts'
 import {useRouter} from "vue-router";
 import {setToken} from "../../utils/auth.ts";
+import {useUserStore} from "../../stores/user.ts";
 
 // 表单数据
 const form = ref({
@@ -53,6 +54,7 @@ const form = ref({
 });
 
 const router = useRouter();
+const userStore = useUserStore();
 
 // 表单提交事件
 const onSubmit = async (values: typeof form.value) => {
@@ -60,7 +62,8 @@ const onSubmit = async (values: typeof form.value) => {
   const resp = await axios.post('/api/user/login', values);
   console.log(resp);
   const token = resp.data;
-  setToken(token)
+  setToken(token);
+  await userStore.getUserInfo();
   showToast('登录成功！');
   router.push('/');
 };

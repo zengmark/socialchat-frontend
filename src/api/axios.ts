@@ -5,7 +5,7 @@ import {getToken} from "../utils/auth.ts";
 
 // 创建 axios 实例
 const instance = axios.create({
-    baseURL: 'http://192.168.1.166:8100', // 基础 URL
+    baseURL: 'http://192.168.1.2:8100', // 基础 URL
     timeout: 20000, // 请求超时时间
     headers: {
         'Content-Type': 'application/json',
@@ -36,7 +36,7 @@ instance.interceptors.response.use(function (response) {
     // 对响应数据做点什么
     const {data} = response;
     if (response.status !== 200 || data.code !== 0) {
-        const errorMsg = data.message || '请求失败';
+        const errorMsg = data.description || data.message || '请求失败';
         showToast(errorMsg);
         console.log(errorMsg)
         return Promise.reject(data);

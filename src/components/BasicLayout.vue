@@ -13,20 +13,20 @@
         </div>
       </template>
       <template #right>
-        <van-icon name="search" class="search-icon" />
+        <van-icon name="search" class="search-icon"/>
       </template>
     </van-nav-bar>
 
     <!-- 动态路由内容 -->
     <div class="layout-content">
-      <router-view />
+      <router-view/>
     </div>
 
     <!-- 底部导航栏 -->
-    <van-tabbar fixed active-color="#07c160" v-model="activeTabBar">
+    <van-tabbar fixed active-color="#07c160" :active="activeTabBar">
       <van-tabbar-item @click="goTo('')" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item @click="goTo('hot')" icon="fire-o">热门</van-tabbar-item>
-      <van-tabbar-item @click="goTo('postEdit')" icon="plus" />
+      <van-tabbar-item @click="goTo('friend')" icon="friends-o">朋友</van-tabbar-item>
+      <van-tabbar-item @click="goTo('postEdit')" icon="plus"/>
       <van-tabbar-item @click="goTo('message')" icon="chat-o" badge="99+">消息</van-tabbar-item>
       <van-tabbar-item @click="goTo('my')" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
@@ -34,12 +34,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import {ref} from 'vue';
+import {useRouter} from 'vue-router';
+import {useUserStore} from "../stores/user.ts";
 
 const router = useRouter();
 const activeTab = ref('discover'); // 顶部导航栏选中项
 const activeTabBar = ref(0); // 底部导航栏选中项
+
+const userStore = useUserStore();
 
 // 切换顶部导航栏的选项
 const switchTab = (tab) => {
@@ -47,10 +50,18 @@ const switchTab = (tab) => {
 };
 
 // 底部导航栏的跳转
-const goTo = (route) => {
-  router.push(`/${route}`);
+const goTo = async (path) => {
+  const activeTarBarTmp = activeTabBar.value;
+  console.log(activeTarBarTmp)
+  const isLogin = userStore.isLoggedIn;
+  console.log(isLogin)
+  if (!isLogin && path !== '') {
+    activeTabBar.value = activeTarBarTmp;
+    showToast('请先登录');
+    return;
+  }
+  router.push(`/${path}`);
 };
-
 </script>
 
 <style scoped>

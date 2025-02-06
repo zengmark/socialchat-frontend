@@ -26,6 +26,12 @@ const routes = [
         name: 'PostEdit',
         component: () => import('../views/post/PostEdit.vue'),
     },
+    {
+        path: '/post/:id',  // 动态路由，匹配帖子 ID
+        name: 'PostDetail',
+        component: () => import('../views/post/PostDetail.vue'),
+        props: true,  // 允许组件通过 `props` 方式接收 `id`
+    },
 ]
 
 export default routes;

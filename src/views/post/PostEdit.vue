@@ -354,7 +354,7 @@ const saveDraft = async () => {
     return;
   }
   const postSaveRequest = await buildPostSaveRequest(1);
-  const resp = await axios.post('/api/post/save', postSaveRequest);
+  const resp = await axios.post('/api/post/savePost', postSaveRequest);
   console.log(resp);
   showToast('草稿已保存');
 };
@@ -367,7 +367,7 @@ const submitPost = async () => {
   }
   const visible = form.value.isPublic ? 0 : 2;
   const postSaveRequest = await buildPostSaveRequest(visible);
-  const resp = await axios.post('/api/post/save', postSaveRequest);
+  const resp = await axios.post('/api/post/savePost', postSaveRequest);
   console.log(resp);
   showToast('帖子发布成功');
 };

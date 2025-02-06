@@ -2,9 +2,9 @@
   <div class="home-page">
     <!-- 选项卡 -->
     <div class="tabs-container">
-      <van-tabs v-model="activeTab" class="custom-tabs" type="line">
-        <van-tab title="综合" />
-        <van-tab title="最新" />
+      <van-tabs v-model:active="activeTab" class="custom-tabs" type="line">
+        <van-tab title="最热"/>
+        <van-tab title="最新"/>
       </van-tabs>
     </div>
 
@@ -19,19 +19,20 @@
         <div class="post-content">
           <!-- 左侧文字内容 -->
           <div class="post-text">
-            <div class="post-title">{{ post.title }}</div>
-            <div class="post-description">{{ post.description }}</div>
+            <div class="post-title">{{ post.postTitle }}</div>
+            <div class="post-description">{{ post.postContent }}</div>
             <div class="post-meta">
-              <van-icon name="like-o" class="meta-icon" />
-              <span class="meta-number">{{ post.likes }}</span>
-              <van-icon name="chat-o" class="meta-icon" />
-              <span class="meta-number">{{ post.comments }}</span>
-              <van-icon name="star-o" class="meta-icon" />
-              <span class="meta-number">{{ post.favorites }}</span>
+              <van-icon name="like-o" class="meta-icon"/>
+              <span class="meta-number">{{ post.likeNum }}</span>
+              <van-icon name="chat-o" class="meta-icon"/>
+              <span class="meta-number">{{ post.commentNum }}</span>
+              <van-icon name="star-o" class="meta-icon"/>
+              <span class="meta-number">{{ post.collectNum }}</span>
             </div>
           </div>
           <!-- 右侧图片 -->
-          <img :src="post.image" alt="帖子图片" class="post-image" />
+          <img :src="(post.postPictures && post.postPictures.length > 0) ? post.postPictures[0] : defaultPicture"
+               alt="帖子图片" class="post-image"/>
         </div>
       </div>
     </van-list>
@@ -39,58 +40,86 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
-
-// 模拟接口返回的数据
-const fetchPosts = async (type, page, pageSize) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000)); // 模拟网络延迟
-  const posts = Array.from({ length: pageSize }, (_, index) => {
-    const id = (page - 1) * pageSize + index + 1;
-    return {
-      id,
-      title: `${type === 'comprehensive' ? '综合' : '最新'}帖子标题 ${id}`,
-      description: `这是帖子内容描述 ${id}，这是示例文字，非常非常长，足够长到需要省略...`,
-      image: `https://picsum.photos/100/100?random=${id}`,
-      likes: Math.floor(Math.random() * 1000), // 点赞数
-      comments: Math.floor(Math.random() * 500), // 评论数
-      favorites: Math.floor(Math.random() * 300), // 收藏数
-    };
-  });
-  return posts;
-};
+import {ref, watch} from 'vue';
+import {useRouter} from 'vue-router';
+import axios from '../../api/axios.ts'
+import { onMounted } from 'vue';
 
 const posts = ref([]); // 帖子列表
-const page = ref(1); // 当前页码
+const current = ref(1); // 当前页码
 const pageSize = 10; // 每页帖子数量
 const loading = ref(false); // 是否正在加载
 const finished = ref(false); // 是否加载完成
-const activeTab = ref(0); // 当前选中的选项卡，0=综合，1=最新
+const activeTab = ref(0); // 当前选中的选项卡，0=最热，1=最新
 const router = useRouter();
+const defaultPicture = "https://gitee.com/Code_for_love/images/raw/master/-6696978110499230174test.png";
 
 // 根据选项卡类型获取帖子类型
-const postType = ref('comprehensive'); // 当前帖子类型：综合 or 最新
+const postType = ref('hot'); // 当前帖子类型：最热 or 最新
+
+// 请求接口返回的数据
+const fetchPosts = async (type, current, pageSize) => {
+  const pageRequest = {
+    current: current,
+    pageSize: pageSize,
+    sortField: type
+  };
+  const responsePosts = await axios.post('/api/post/listHomePosts', pageRequest);
+  const {data} = responsePosts;
+  const {records} = data;
+  // console.log(records);
+  return records;
+
+  // 下面是 mock 数据
+  // await new Promise((resolve) => setTimeout(resolve, 1000)); // 模拟网络延迟
+  // return Array.from({length: pageSize}, (_, index) => {
+  //   const id = (current - 1) * pageSize + index + 1;
+  //   return {
+  //     id,
+  //     title: `${type === 'hot' ? '最热' : '最新'}帖子标题 ${id}`,
+  //     description: `这是帖子内容描述 ${id}，这是示例文字，非常非常长，足够长到需要省略...`,
+  //     image: `https://picsum.photos/100/100?random=${id}`,
+  //     likes: Math.floor(Math.random() * 1000), // 点赞数
+  //     comments: Math.floor(Math.random() * 500), // 评论数
+  //     favorites: Math.floor(Math.random() * 300), // 收藏数
+  //   };
+  // });
+};
 
 // 加载更多数据
 const onLoad = async () => {
-  loading.value = true;
+  // 如果已经在加载中，则不触发请求
+  if (loading.value) return;
 
-  const newPosts = await fetchPosts(postType.value, page.value, pageSize);
+  loading.value = true; // 开始加载
 
-  if (newPosts.length === 0) {
-    finished.value = true; // 停止加载
-  } else {
-    posts.value.push(...newPosts); // 追加新数据
-    page.value++;
+  try {
+    const newPosts = await fetchPosts(postType.value, current.value, pageSize);
+
+    if (newPosts.length === 0) {
+      finished.value = true; // 停止加载
+    } else {
+      posts.value.push(...newPosts); // 追加新数据
+      console.log(posts.value)
+      current.value++;
+    }
+  } catch (error) {
+    console.error('加载数据失败', error);
+  } finally {
+    loading.value = false; // 请求完成，恢复加载状态
   }
-
-  loading.value = false;
 };
+
+onMounted(() => {
+  onLoad(); // 页面初次加载时调用 onLoad
+});
+
 
 // 切换选项卡时重新加载数据
 watch(activeTab, (newVal) => {
-  postType.value = newVal === 0 ? 'comprehensive' : 'latest';
-  page.value = 1;
+  console.log("选项卡切换:", newVal);
+  postType.value = newVal === 0 ? 'hot' : 'new';
+  current.value = 1;
   posts.value = [];
   finished.value = false;
   onLoad();
