@@ -1,8 +1,14 @@
 <template>
   <div class="post-container">
+    <!-- 左上角的返回按钮 -->
+    <div class="back-button">
+      <van-icon name="arrow-left" size="24" @click="goBack" class="back-icon" />
+    </div>
+
     <!-- 轮播图（占屏幕一半） -->
     <van-swipe class="swipe-container" :autoplay="3000" style="height: 50vh">
-      <van-swipe-item v-for="(image, index) in defaultImages" :key="index">
+      <!-- 判断 post.postPictures 是否为有效数组且长度大于 0 -->
+      <van-swipe-item v-for="(image, index) in (Array.isArray(post.postPictures) && post.postPictures.length > 0 ? post.postPictures : defaultImages)" :key="index">
         <img :src="image" class="swipe-image"/>
       </van-swipe-item>
     </van-swipe>
@@ -11,7 +17,7 @@
     <div class="post-content">
       <h1 class="title">{{ post.postTitle || '默认标题' }}</h1>
       <div class="content">{{ post.postContent }}</div>
-      <div v-if="post.userAt" class="mention">@{{ post.userAt }}</div>
+      <div v-if="post.userAt && post.userAt.length > 0" class="mention">@{{ post.userAt }}</div>
       <p/>
       <div class="meta">
         <span class="date">{{ formatDate(post.createTime) }}</span>
@@ -77,6 +83,16 @@
               />
               <span class="like-count">{{ comment.likeNum }}</span>
               <van-button plain @click="handleReply(comment)">回复</van-button>
+
+              <!-- 删除按钮，只在用户是评论的作者时显示 -->
+              <van-icon
+                  v-if="comment.userId === user.id"
+                  name="delete"
+                  size="20"
+                  color="#999"
+                  @click="deleteComment(comment)"
+                  class="delete-icon"
+              />
             </div>
 
             <!-- 子评论 -->
@@ -122,7 +138,7 @@
                   </div>
                 </div>
               </div>
-              <div v-if="comment.innerCommentList.length > 2" class="more-comments">
+              <div class="more-comments">
                 <van-button
                     type="primary"
                     size="mini"
@@ -143,7 +159,7 @@
       <van-button
           class="comment-btn"
           icon="comment-o"
-          @click="showCommentInput = true"
+          @click="showPostCommentInput = true"
       >
         {{ post.commentNum }} 条评论
       </van-button>
@@ -165,7 +181,7 @@
       </div>
     </div>
 
-    <!-- 评论输入弹窗 -->
+    <!-- 评论评论弹窗 -->
     <van-popup v-model:show="showCommentInput" position="bottom">
       <div class="comment-input-wrapper">
         <van-field
@@ -176,6 +192,20 @@
             placeholder="写下你的评论..."
         />
         <van-button type="primary" size="small" @click="submitComment">提交</van-button>
+      </div>
+    </van-popup>
+
+    <!-- 评论帖子弹窗 -->
+    <van-popup v-model:show="showPostCommentInput" position="bottom">
+      <div class="comment-input-wrapper">
+        <van-field
+            v-model="postCommentText"
+            rows="3"
+            autosize
+            type="textarea"
+            placeholder="写下你的评论..."
+        />
+        <van-button type="primary" size="small" @click="submitPostComment">提交</van-button>
       </div>
     </van-popup>
 
@@ -213,6 +243,15 @@
               >
                 回复
               </van-button>
+              <!-- 删除按钮，只在用户是评论的作者时显示 -->
+              <van-icon
+                  v-if="selectedComment.userId === user.id"
+                  name="delete"
+                  size="20"
+                  color="#999"
+                  @click="deleteComment(selectedComment)"
+                  class="delete-icon"
+              />
             </div>
           </div>
         </div>
@@ -250,6 +289,15 @@
 
                 <!-- 回复按钮 -->
                 <van-button size="mini" plain @click="handleSubReply(sub)">回复</van-button>
+                <!-- 删除按钮，只在用户是评论的作者时显示 -->
+                <van-icon
+                    v-if="sub.userId === user.id"
+                    name="delete"
+                    size="20"
+                    color="#999"
+                    @click="deleteComment(sub)"
+                    class="delete-icon"
+                />
               </div>
             </div>
           </div>
@@ -259,13 +307,17 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import {ref, onMounted, nextTick} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import axios from '../../api/axios.ts'
+import {useUserStore} from "../../stores/user.ts";
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
+
+const user = ref({});
 
 // 轮播图数据
 const defaultImages = ref([
@@ -275,6 +327,8 @@ const defaultImages = ref([
 
 // 帖子数据
 const post = ref({});
+const showPostCommentInput = ref(false)
+const postCommentText = ref('');
 
 // 评论相关
 const comments = ref([])
@@ -286,6 +340,8 @@ const commentText = ref('')
 const load = ref(false);
 const currentReplyComment = ref(null)
 
+// 是否是评论子评论
+const isSubComment = ref(false);
 const showCommentDetailModal = ref(false)
 const selectedComment = ref(null)
 const loadingSubComments = ref(false)
@@ -293,7 +349,7 @@ const finishedSubComments = ref(false)
 const subCommentsPage = ref(1)
 const subLoad = ref(false)
 
-const truncatedContent = (text: string) => {
+const truncatedContent = (text) => {
   return text?.length > 50 ? text.slice(0, 50) + '...' : text
 }
 
@@ -301,11 +357,65 @@ const toggleExpand = (comment) => {
   comment.expanded = !comment.expanded
 }
 
+const toggleCollect = async () => {
+  try {
+    const userInfo = await userStore.getUserInfo();
+    let collectAction = 0;
+    if (post.value.collected) {
+      collectAction = 1;
+    }
+    const collectAddRequest = {
+      targetId: post.value.id,
+      targetType: 0,
+      collectUserId: userInfo.id,
+      collectAction: collectAction,
+      userId: post.value.userId,
+    };
+    await axios.post('/api/like_collect/collect/collect', collectAddRequest);
+    post.value.collected = !post.value.collected;
+    post.value.collectNum += post.value.collected ? 1 : -1;
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const toggleLike = async () => {
+  try {
+    const userInfo = await userStore.getUserInfo();
+    let likeAction = 0;
+    if (post.value.liked) {
+      likeAction = 1;
+    }
+    const likeAddRequest = {
+      targetId: post.value.id,
+      targetType: 0,
+      likeUserId: userInfo.id,
+      likeAction: likeAction,
+      userId: post.value.userId
+    };
+    await axios.post('/api/like_collect/like/like', likeAddRequest);
+    post.value.liked = !post.value.liked;
+    post.value.likeNum += post.value.liked ? 1 : -1;
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 const toggleCommentLike = async (comment) => {
   try {
-    const resp = await axios.post('/api/like/comment', {
-      commentId: comment.commentId
-    })
+    const userInfo = await userStore.getUserInfo();
+    let likeAction = 0;
+    if (comment.liked) {
+      likeAction = 1;
+    }
+    const likeAddRequest = {
+      targetId: comment.id,
+      targetType: 1,
+      likeUserId: userInfo.id,
+      likeAction: likeAction,
+      userId: comment.userId,
+    };
+    await axios.post('/api/like_collect/like/like', likeAddRequest);
     comment.liked = !comment.liked
     comment.likeNum += comment.liked ? 1 : -1
   } catch (e) {
@@ -315,9 +425,19 @@ const toggleCommentLike = async (comment) => {
 
 const toggleSubLike = async (subComment) => {
   try {
-    const resp = await axios.post('/api/like/comment', {
-      commentId: subComment.commentId
-    })
+    const userInfo = await userStore.getUserInfo();
+    let likeAction = 0;
+    if (subComment.liked) {
+      likeAction = 1;
+    }
+    const likeAddRequest = {
+      targetId: subComment.id,
+      targetType: 1,
+      likeUserId: userInfo.id,
+      likeAction: likeAction,
+      userId: subComment.userId
+    }
+    await axios.post('/api/like_collect/like/like', likeAddRequest)
     subComment.liked = !subComment.liked
     subComment.likeNum += subComment.liked ? 1 : -1
   } catch (e) {
@@ -410,11 +530,15 @@ const viewCommentDetail = (comment) => {
 };
 
 const handleReply = (comment) => {
+  console.log(comment);
+  isSubComment.value = false;
   currentReplyComment.value = comment;
   showCommentInput.value = true;
 };
 
 const handleSubReply = (subComment) => {
+  console.log(subComment)
+  isSubComment.value = true;
   currentReplyComment.value = subComment;
 
   // 先保持弹窗不关闭，等待 Vue 渲染
@@ -423,31 +547,115 @@ const handleSubReply = (subComment) => {
   });
 };
 
+// 评论评论
 const submitComment = async () => {
   if (!commentText.value.trim()) return;
 
   try {
-    const resp = await axios.post('/api/comment/add', {
-      postId: route.params.id,
-      content: commentText.value,
-      parentId: currentReplyComment.value?.commentId || null,
-      replyToId: currentReplyComment.value?.userId || null
-    });
+    const userInfo = await userStore.getUserInfo();
+    const postId = route.params.id;
+    const commentAddRequest = {
+      userId: userInfo.id,
+      userName: userInfo.userName,
+      userAvatar: userInfo.userAvatar,
+      postId: postId,
+      parentId: currentReplyComment.value.id,
+      targetType: 1,
+      targetId: currentReplyComment.value.id,
+      commentContent: commentText.value,
+      targetUserId: currentReplyComment.value.userId,
+      targetUserName: currentReplyComment.value.userName,
+      targetUserAvatar: currentReplyComment.value.userAvatar
+    }
+    // 说明回复的是子评论
+    if (isSubComment.value) {
+      commentAddRequest.parentId = selectedComment.value.id
+    }
+
+    await axios.post('/api/comment/addComment', commentAddRequest);
 
     commentText.value = '';
     showCommentInput.value = false;
     currentReplyComment.value = null;
+    isSubComment.value = false;
     // 重新加载评论
     comments.value = [];
     page.value = 1;
     finished.value = false;
+    showCommentDetailModal.value = false;
     onLoadComments();
   } catch (e) {
     console.error(e);
   }
 };
 
-onMounted(() => {
+// 评论帖子
+const submitPostComment = async () => {
+  if(!postCommentText.value.trim()) return;
+
+  try {
+    const userInfo = await userStore.getUserInfo();
+    const postId = route.params.id;
+    const postUserInfo = await axios.post('/api/user/getUserInfoByUserId',null,{
+      params: {
+        userId: post.value.userId
+      }
+    })
+    const commentAddRequest = {
+      userId: userInfo.id,
+      userName: userInfo.userName,
+      userAvatar: userInfo.userAvatar,
+      postId: postId,
+      parentId: postId,
+      targetType: 0,
+      targetId: postId,
+      commentContent: postCommentText.value,
+      targetUserId: post.value.userId,
+      targetUserName: postUserInfo.userName,
+      targetUserAvatar: postUserInfo.userAvatar
+    }
+
+    const resp = await axios.post('/api/comment/addComment', commentAddRequest);
+    console.log(resp)
+
+    postCommentText.value = '';
+    showPostCommentInput.value = false;
+    currentReplyComment.value = null;
+    // 重新加载评论
+    comments.value = [];
+    page.value = 1;
+    finished.value = false;
+    showCommentDetailModal.value = false;
+    onLoadComments();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+const deleteComment = async (comment) => {
+  try {
+    const commentId = comment.id;
+    await axios.post('/api/comment/deleteComment', null, {
+      params: {
+        commentId: commentId
+      }
+    });
+    comments.value = [];
+    page.value = 1;
+    finished.value = false;
+    showCommentDetailModal.value = false;
+    onLoadComments();
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const goBack = () => {
+  router.back()
+}
+
+onMounted(async () => {
+  user.value = await userStore.getUserInfo();
   onLoadPost();
 });
 </script>
@@ -683,7 +891,6 @@ onMounted(() => {
 
 /* 回复对象 */
 .reply-to {
-  //color: #1989fa;
   font-weight: 500;
 }
 
@@ -841,5 +1048,19 @@ onMounted(() => {
 /* 让主界面和弹窗的点赞按钮 hover 颜色相同 */
 .main-like-area:hover, .popup-like-area:hover {
   color: red;
+}
+
+/* 左上角返回按钮的样式 */
+.back-button {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 10;
+}
+
+.back-icon {
+  color: #333; /* 设置图标颜色 */
+  cursor: pointer;
+  background: transparent; /* 透明背景 */
 }
 </style>

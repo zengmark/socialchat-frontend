@@ -69,21 +69,6 @@ const fetchPosts = async (type, current, pageSize) => {
   const {records} = data;
   // console.log(records);
   return records;
-
-  // 下面是 mock 数据
-  // await new Promise((resolve) => setTimeout(resolve, 1000)); // 模拟网络延迟
-  // return Array.from({length: pageSize}, (_, index) => {
-  //   const id = (current - 1) * pageSize + index + 1;
-  //   return {
-  //     id,
-  //     title: `${type === 'hot' ? '最热' : '最新'}帖子标题 ${id}`,
-  //     description: `这是帖子内容描述 ${id}，这是示例文字，非常非常长，足够长到需要省略...`,
-  //     image: `https://picsum.photos/100/100?random=${id}`,
-  //     likes: Math.floor(Math.random() * 1000), // 点赞数
-  //     comments: Math.floor(Math.random() * 500), // 评论数
-  //     favorites: Math.floor(Math.random() * 300), // 收藏数
-  //   };
-  // });
 };
 
 // 加载更多数据

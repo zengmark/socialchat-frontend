@@ -13,7 +13,7 @@
         </div>
       </template>
       <template #right>
-        <van-icon name="search" class="search-icon"/>
+        <van-icon name="search" class="search-icon" @click="goToSearchPage"/>
       </template>
     </van-nav-bar>
 
@@ -53,14 +53,22 @@ const switchTab = (tab) => {
 const goTo = async (path) => {
   const activeTarBarTmp = activeTabBar.value;
   console.log(activeTarBarTmp)
+  console.log(path);
   const isLogin = userStore.isLoggedIn;
   console.log(isLogin)
-  if (!isLogin && path !== '') {
+  if (!isLogin && (path === 'friend' || path === 'postEdit' || path === 'message')) {
+    console.log('进来')
     activeTabBar.value = activeTarBarTmp;
-    showToast('请先登录');
+    showToast('输入url有问题');
     return;
   }
+  console.log('跳转');
   router.push(`/${path}`);
+};
+
+// 跳转到搜索页面
+const goToSearchPage = () => {
+  router.push('/search'); // 跳转到搜索页面
 };
 </script>
 

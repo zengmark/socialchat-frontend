@@ -54,6 +54,21 @@
         <span>是否公开可见</span>
         <van-switch v-model="form.isPublic" size="20px"/>
       </div>
+      <!-- 新增标签选择项 -->
+      <div class="tag-selection">
+        <h4 class="section-subtitle">选择标签</h4>
+        <div class="tag-list">
+          <van-tag
+              v-for="tag in tags"
+              :key="tag.tagId"
+              :class="{'selected-tag': selectedTags.includes(tag.tagName)}"
+              @click="toggleTag(tag)"
+              class="tag-item"
+          >
+            {{ tag.tagName }}
+          </van-tag>
+        </div>
+      </div>
     </div>
 
     <!-- 页面底部的填充 -->
@@ -133,11 +148,11 @@
 </template>
 
 <script setup>
-import {ref, computed} from 'vue';
-import {useRouter} from 'vue-router';
-import axios from '../../api/axios.ts'
-import {initWebSocket} from "../../services/imageWebsocket.ts";
-import {useUserStore} from "../../stores/user.ts";
+import {ref, computed, onMounted} from 'vue';
+import { useRouter } from 'vue-router';
+import axios from '../../api/axios.ts';
+import { initWebSocket } from '../../services/imageWebsocket.ts';
+import { useUserStore } from '../../stores/user.ts';
 
 // 路由
 const router = useRouter();
@@ -163,12 +178,9 @@ const vote = ref({
 const hasVote = computed(() => {
   // 检查 title 是否非空
   const hasTitle = vote.value.title.trim() !== '';
-
   // 检查 options 是否至少有两个非空内容项
   const validOptions = vote.value.options.filter(option => option.trim() !== '');
   const hasValidOptions = validOptions.length >= 2;
-
-  // 满足条件时返回 true，否则返回 false
   return hasTitle && hasValidOptions;
 });
 
@@ -182,6 +194,28 @@ const searchQuery = ref('');
 const searchResults = ref([]);
 
 const userStore = useUserStore();
+
+// 新增：标签选择相关数据
+const tags = ref([
+  { tagId: 1, tagName: '科技' },
+  { tagId: 2, tagName: '娱乐' },
+  { tagId: 3, tagName: '体育' },
+  { tagId: 4, tagName: '新闻' },
+]);
+const selectedTags = ref([]);
+const tagList = ref([]);
+
+// 切换标签选中状态
+const toggleTag = (tag) => {
+  const tagName = tag.tagName;
+  if (selectedTags.value.includes(tagName)) {
+    selectedTags.value = selectedTags.value.filter(t => t !== tagName);
+    tagList.value = tagList.value.filter(t => t.tagName !== tagName);
+  } else {
+    selectedTags.value.push(tagName);
+    tagList.value.push(tag);
+  }
+};
 
 // 返回上一页
 const goBack = () => {
@@ -237,7 +271,7 @@ const searchUsers = () => {
     return;
   }
   // 模拟搜索结果
-  searchResults.value = Array.from({length: 5}, (_, index) => ({
+  searchResults.value = Array.from({ length: 5 }, (_, index) => ({
     id: index + 1,
     name: `用户 ${searchQuery.value} ${index + 1}`,
   }));
@@ -256,7 +290,7 @@ const beforeRead = (file) => {
     showToast('仅支持上传图片文件');
     return false;
   }
-  const isUnderLimit = file.size / 1024 / 1024 < 5; // 文件大小限制为 5MB
+  const isUnderLimit = file.size / 1024 / 1024 < 5; // 限制为 5MB
   if (!isUnderLimit) {
     showToast('图片大小不能超过 5MB');
     return false;
@@ -272,46 +306,25 @@ const handleAfterRead = async (file) => {
   }
   const formData = new FormData();
   formData.append('file', file.file);
-  const sessionId = 'session-' + Math.random().toString(36).substr(2, 9); // 生成一个 sessionId
+  const sessionId = 'session-' + Math.random().toString(36).substr(2, 9); // 生成 sessionId
 
-  // 向后端上传图片
   try {
     const wsPromise = initWebSocket(sessionId);
     await axios.post('/api/post/uploadPostImage', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      params: {sessionId}, // 将 sessionId 传递给后端
+      params: { sessionId },
     });
-    // 等待 WebSocket 返回结果
+    // 等待 WebSocket 返回图片地址
     const imageUrl = await wsPromise;
-    console.log('WebSocket 返回的图片地址:', imageUrl)// const imageUrl = uploadResult.value.data;
+    console.log('WebSocket 返回的图片地址:', imageUrl);
     imageUrls.value.push(imageUrl);
-    console.log(imageUrls.value);
-    showToast('图片上传成功')
+    showToast('图片上传成功');
   } catch (error) {
     console.error("图片上传失败", error);
     showToast('图片上传失败');
   }
-
-  // const formData = new FormData();
-  // formData.append('file', file.file);
-
-  // try {
-  //   // 向后端上传文件
-  //   const response = await axios.post('/api/upload', formData, {
-  //     headers: {
-  //       'Content-Type': 'multipart/form-data',
-  //     },
-  //   });
-  //
-  //   const imageUrl = response.data.url; // 后端返回的图片 URL
-  //   images.value.push(imageUrl);
-  //   showToast('图片上传成功');
-  // } catch (error) {
-  //   showToast('图片上传失败，请重试');
-  //   console.error('上传失败:', error);
-  // }
 };
 
 // 删除图片
@@ -322,9 +335,9 @@ const deleteImage = (file) => {
 // 保存前置校验
 const judgeForm = () => {
   return !(!form.value.title || !form.value.content || images.value.length === 0);
-}
+};
 
-// 构造保存草稿态的请求数据
+// 构造保存草稿或发布帖子的请求数据
 const buildPostSaveRequest = async (visible) => {
   const userInfo = await userStore.getUserInfo();
   console.log("用户信息为", userInfo);
@@ -332,9 +345,10 @@ const buildPostSaveRequest = async (visible) => {
     showToast('用户未登录');
     throw new Error('用户未登录');
   }
-  const userId = userInfo.id;
+  const tags = tagList.value.map(tag => tag.tagName);
+  const tagIds = tagList.value.map(tag => tag.tagId);
   return {
-    userId: userId,
+    userId: userInfo.id,
     postTitle: form.value.title,
     postContent: form.value.content,
     postPictureList: imageUrls.value,
@@ -343,9 +357,12 @@ const buildPostSaveRequest = async (visible) => {
       hasVote: hasVote.value,
       voteTitle: vote.value.title,
       voteItemList: vote.value.options
-    }
+    },
+    // 将用户选择的标签包含在请求中
+    tags: tags,
+    tagIds: tagIds
   };
-}
+};
 
 // 保存草稿
 const saveDraft = async () => {
@@ -371,6 +388,23 @@ const submitPost = async () => {
   console.log(resp);
   showToast('帖子发布成功');
 };
+
+// 加载标签列表
+const onLoadTags = async () => {
+  try {
+    const resp = await axios.post('/api/post/listTagList');
+    const tagList = resp.data;
+    console.log(tagList);
+    tags.value = tagList;
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+onMounted(() => {
+  onLoadTags();
+})
+
 </script>
 
 <style scoped>
@@ -411,6 +445,39 @@ const submitPost = async () => {
   margin-top: 8px;
 }
 
+/* 新增标签选择项的样式 */
+.tag-selection {
+  margin-top: 15px;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 标签项基础样式 */
+.tag-item {
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: background-color 0.3s, color 0.3s;
+  cursor: pointer;
+  background-color: #f0f0f0; /* 默认灰色背景 */
+  color: #333;
+}
+
+/* 选中状态 */
+.selected-tag {
+  background-color: #0061f2 !important;
+  color: #fff !important;
+}
+
 .fixed-footer {
   position: fixed;
   bottom: 0;
@@ -421,12 +488,12 @@ const submitPost = async () => {
   display: flex;
   gap: 12px;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 1000; /* 确保固定按钮层级最高 */
+  z-index: 1000;
 }
 
 .vote-popup-content {
   padding: 16px;
-  max-height: 66vh; /* 最大高度为屏幕的三分之二 */
+  max-height: 66vh;
   overflow-y: auto;
 }
 
@@ -458,11 +525,10 @@ const submitPost = async () => {
   margin-left: 8px;
 }
 
-
 /* @用户弹框 */
 .mention-popup-content {
   padding: 16px;
-  max-height: 66vh; /* 限制窗口最大高度为屏幕的三分之二 */
+  max-height: 66vh;
   display: flex;
   flex-direction: column;
 }
@@ -472,15 +538,15 @@ const submitPost = async () => {
 }
 
 .mention-results {
-  flex: 1; /* 搜索结果区域占据剩余空间 */
+  flex: 1;
   overflow-y: auto;
-  padding-bottom: 12px; /* 给底部按钮预留空间 */
+  padding-bottom: 12px;
 }
 
 .no-results {
   text-align: center;
   color: #999;
-  margin: auto; /* 居中显示 */
+  margin: auto;
   font-size: 14px;
 }
 </style>
