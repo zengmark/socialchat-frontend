@@ -8,6 +8,11 @@ const routes = [
                 path: '', // 默认子路由
                 name: 'PostHome',
                 component: () => import('../views/post/PostHome.vue'),
+            },
+            {
+                path: '/my',
+                name: 'My',
+                component: () => import('../views/user/UserMy.vue')
             }
         ],
     },
@@ -45,9 +50,14 @@ const routes = [
         props: true,  // 允许组件通过 `props` 方式接收 `id`
     },
     {
-        path: '/my',
-        name: 'My',
-        component: () => import('../views/user/UserMy.vue')
+        path: '/myPosts',  // 动态路由，匹配帖子 ID
+        name: 'myPosts',
+        component: () => import('../views/post/PostUserHome.vue'),
+    },
+    {
+        path: '/mySetting',  // 动态路由，匹配帖子 ID
+        name: 'mySetting',
+        component: () => import('../views/user/UserSetting.vue'),
     }
 
 ]

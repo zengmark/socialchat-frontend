@@ -1,7 +1,7 @@
 <template>
   <div class="layout">
     <!-- 顶部导航栏 -->
-    <van-nav-bar fixed z-index="100">
+    <van-nav-bar v-if="isHomePage" fixed z-index="100">
       <template #left>
         <!-- 清空左侧内容，使导航项能居中 -->
       </template>
@@ -23,7 +23,7 @@
     </div>
 
     <!-- 底部导航栏 -->
-    <van-tabbar fixed active-color="#07c160" :active="activeTabBar">
+    <van-tabbar fixed active-color="#07c160" v-model="activeTabBar">
       <van-tabbar-item @click="goTo('')" icon="home-o">首页</van-tabbar-item>
       <van-tabbar-item @click="goTo('friend')" icon="friends-o">朋友</van-tabbar-item>
       <van-tabbar-item @click="goTo('postEdit')" icon="plus"/>
@@ -34,41 +34,64 @@
 </template>
 
 <script setup>
-import {ref} from 'vue';
-import {useRouter} from 'vue-router';
-import {useUserStore} from "../stores/user.ts";
+import { ref, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useUserStore } from "../stores/user.ts";
+import { showToast } from 'vant';
 
 const router = useRouter();
-const activeTab = ref('discover'); // 顶部导航栏选中项
-const activeTabBar = ref(0); // 底部导航栏选中项
-
+const route = useRoute();
 const userStore = useUserStore();
 
-// 切换顶部导航栏的选项
+const activeTab = ref('discover'); // 顶部导航栏选中项
+
+// 根据当前路由 path 自动计算底部导航栏的激活项
+const activeTabBar = computed(() => {
+  switch (route.path) {
+    case '/':
+      return 0;
+    case '/friend':
+      return 1;
+    case '/postEdit':
+      return 2;
+    case '/message':
+      return 3;
+    case '/my':
+      return 4;
+    default:
+      return 0;
+  }
+});
+
+// 监听 route.path 变化时，更新 activeTabBar 的值
+watch(() => route.path, () => {
+  // 触发 activeTabBar 的计算，确保底部导航栏更新
+}, { immediate: true });
+
+// 判断当前路径是否为首页
+const isHomePage = computed(() => route.path === '/');
+
+// 切换顶部导航栏的选项（示例逻辑）
 const switchTab = (tab) => {
   activeTab.value = tab;
 };
 
-// 底部导航栏的跳转
+// 底部导航栏跳转
 const goTo = async (path) => {
-  const activeTarBarTmp = activeTabBar.value;
-  console.log(activeTarBarTmp)
-  console.log(path);
+  // 登录校验逻辑
   const isLogin = userStore.isLoggedIn;
-  console.log(isLogin)
   if (!isLogin && (path === 'friend' || path === 'postEdit' || path === 'message')) {
-    console.log('进来')
-    activeTabBar.value = activeTarBarTmp;
-    showToast('输入url有问题');
+    showToast('请输入正确的URL');
     return;
   }
-  console.log('跳转');
+  activeTabBar.value = 4;
+  // 跳转到对应的路径
   router.push(`/${path}`);
 };
 
 // 跳转到搜索页面
 const goToSearchPage = () => {
-  router.push('/search'); // 跳转到搜索页面
+  router.push('/search');
 };
 </script>
 

@@ -2,7 +2,6 @@ import {defineStore} from 'pinia';
 import axios from '../api/axios';
 import {getToken, removeToken} from '../utils/auth';
 import {useRouter} from "vue-router";
-import {showToast} from "vant";
 
 const router = useRouter();
 
@@ -52,6 +51,32 @@ export const useUserStore = defineStore('user', {
                 return this.userInfo;
             }
             return null;
+        },
+        // 更新用户信息
+        async updateUserInfo(userUpdateRequest: any) {
+            try {
+                // 调用后端更新接口
+                const resp = await axios.post('/api/user/updateUserInfo', userUpdateRequest);
+                const updateUserInfo = resp.data;
+                this.setUserInfo(updateUserInfo); // 直接传入更新后的数据
+                showToast('用户信息更新成功');
+            } catch (error) {
+                console.error('更新用户信息失败:', error);
+                showToast('更新失败，请稍后再试');
+            }
+        },
+        // 更新用户头像
+        async updateUserAvatar(userUpdateAvatarRequest: any) {
+            try {
+                // 调用后端更新接口
+                const resp = await axios.post('/api/user/updateUserAvatar', userUpdateAvatarRequest);
+                const updateUserInfo = resp.data;
+                this.setUserInfo(updateUserInfo); // 直接传入更新后的数据
+                showToast('用户信息更新成功');
+            } catch (error) {
+                console.error('更新用户信息失败:', error);
+                showToast('更新失败，请稍后再试');
+            }
         },
     },
 });
