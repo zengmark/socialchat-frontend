@@ -46,6 +46,7 @@ import axios from '../../api/axios.ts'
 import {useRouter} from "vue-router";
 import {setToken} from "../../utils/auth.ts";
 import {useUserStore} from "../../stores/user.ts";
+import {useSseStore} from "../../stores/sse.ts";
 
 // 表单数据
 const form = ref({
@@ -55,6 +56,7 @@ const form = ref({
 
 const router = useRouter();
 const userStore = useUserStore();
+const sseStore = useSseStore();
 
 // 表单提交事件
 const onSubmit = async (values: typeof form.value) => {
@@ -63,7 +65,13 @@ const onSubmit = async (values: typeof form.value) => {
   console.log(resp);
   const token = resp.data;
   setToken(token);
-  await userStore.getUserInfo();
+  const userInfo = await userStore.getUserInfo();
+  console.log("初始化SSE", userInfo)
+  const isLogin = userStore.isLoggedIn;
+  if (!isLogin) {
+    return;
+  }
+  sseStore.initSse(userInfo.id);
   showToast('登录成功！');
   router.push('/');
 };

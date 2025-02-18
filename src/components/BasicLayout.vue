@@ -1,18 +1,21 @@
 <template>
   <div class="layout">
     <!-- 顶部导航栏 -->
-    <van-nav-bar v-if="isHomePage" fixed z-index="100">
+    <van-nav-bar  fixed z-index="100">
       <template #left>
         <!-- 清空左侧内容，使导航项能居中 -->
       </template>
       <template #title>
-        <div class="nav-tabs">
+        <div v-if="isHomePage" class="nav-tabs">
           <span :class="{ active: activeTab === 'follow' }" @click="switchTab('follow')">关注</span>
           <span :class="{ active: activeTab === 'discover' }" @click="switchTab('discover')">发现</span>
           <span :class="{ active: activeTab === 'chat' }" @click="switchTab('chat')">聊天</span>
         </div>
+        <div v-else>
+          <h3>论坛社交交友平台</h3>
+        </div>
       </template>
-      <template #right>
+      <template v-if="isHomePage" #right>
         <van-icon name="search" class="search-icon" @click="goToSearchPage"/>
       </template>
     </van-nav-bar>
@@ -27,21 +30,24 @@
       <van-tabbar-item @click="goTo('')" icon="home-o">首页</van-tabbar-item>
       <van-tabbar-item @click="goTo('friend')" icon="friends-o">朋友</van-tabbar-item>
       <van-tabbar-item @click="goTo('postEdit')" icon="plus"/>
-      <van-tabbar-item @click="goTo('message')" icon="chat-o" badge="99+">消息</van-tabbar-item>
+      <van-tabbar-item @click="goTo('message')" icon="chat-o" :badge="sseStore.unreadMessagesCount > 0 ? sseStore.unreadMessagesCount : ''">消息</van-tabbar-item>
       <van-tabbar-item @click="goTo('my')" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from "../stores/user.ts";
 import { showToast } from 'vant';
+import {useSseStore} from "../stores/sse.ts";
+import axios from '../api/axios.ts'
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
+const sseStore = useSseStore();
 
 const activeTab = ref('discover'); // 顶部导航栏选中项
 
@@ -84,7 +90,6 @@ const goTo = async (path) => {
     showToast('请输入正确的URL');
     return;
   }
-  activeTabBar.value = 4;
   // 跳转到对应的路径
   router.push(`/${path}`);
 };
@@ -93,6 +98,53 @@ const goTo = async (path) => {
 const goToSearchPage = () => {
   router.push('/search');
 };
+
+const initUnReadMessageCount = async () => {
+  const resp = await axios.post('/api/like_collect/message/getUnReadCount');
+  const messageCount = resp.data;
+  sseStore.initMessageCount(messageCount);
+}
+
+onMounted(() => {
+  initUnReadMessageCount();
+})
+
+/* ========== 新增：SSE 消息通信机制 ========== */
+// let eventSource = null;
+//
+// const initSSE = async () => {
+//   console.log('建立SSE连接')
+//   // 请根据实际情况修改 URL
+//   const userInfo = await userStore.getUserInfo();
+//   const isLogin = userStore.isLoggedIn;
+//   console.log(isLogin)
+//   if (!isLogin) {
+//     return;
+//   }
+//   const userId = userInfo.id;
+//   eventSource = new EventSource(`http://192.168.1.2:8100/api/like_collect/sse/stream/${userId}`);
+//
+//   // 接收消息事件
+//   eventSource.onmessage = (event) => {
+//     console.log("Received SSE message:", event.data);
+//     // 收到新消息时增加未读消息计数
+//     unreadMessagesCount.value++;
+//   };
+//
+//   eventSource.onerror = (error) => {
+//     console.error("SSE connection error:", error);
+//   };
+// }
+//
+// onMounted(() => {
+//   initSSE();
+// });
+
+// onUnmounted(() => {
+//   if (eventSource) {
+//     eventSource.close();
+//   }
+// });
 </script>
 
 <style scoped>

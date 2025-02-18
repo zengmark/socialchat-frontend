@@ -86,7 +86,7 @@
 
               <!-- 删除按钮，只在用户是评论的作者时显示 -->
               <van-icon
-                  v-if="comment.userId === user.id"
+                  v-if="user && comment.userId === user.id"
                   name="delete"
                   size="20"
                   color="#999"
@@ -317,7 +317,8 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const user = ref({});
+const user = ref({
+});
 
 // 轮播图数据
 const defaultImages = ref([
@@ -382,6 +383,10 @@ const toggleCollect = async () => {
 const toggleLike = async () => {
   try {
     const userInfo = await userStore.getUserInfo();
+    const isLogin = userStore.isLoggedIn;
+    if (!isLogin) {
+      showToast('请先登录后再点赞');
+    }
     let likeAction = 0;
     if (post.value.liked) {
       likeAction = 1;

@@ -13,7 +13,12 @@ const routes = [
                 path: '/my',
                 name: 'My',
                 component: () => import('../views/user/UserMy.vue')
-            }
+            },
+            {
+                path: '/message',  // 动态路由，匹配帖子 ID
+                name: 'message',
+                component: () => import('../views/message/MessageHome.vue'),
+            },
         ],
     },
     {
@@ -58,7 +63,18 @@ const routes = [
         path: '/mySetting',  // 动态路由，匹配帖子 ID
         name: 'mySetting',
         component: () => import('../views/user/UserSetting.vue'),
-    }
+    },
+    {
+        path: '/chat/:id',  // 动态路由，匹配帖子 ID
+        name: 'ChatPage',
+        component: () => import('../views/message/ChatPage.vue'),
+        props: true,  // 允许组件通过 `props` 方式接收 `id`
+    },
+    {
+        path: '/notifications',  // 动态路由，匹配帖子 ID
+        name: 'notifications',
+        component: () => import('../views/message/MessageNotifications.vue'),
+    },
 
 ]
 
