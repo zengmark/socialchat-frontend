@@ -11,10 +11,15 @@
       <div
           v-for="(msg, index) in messages"
           :key="index"
-          :class="['chat-message', msg.from === 'me' ? 'sent' : 'received']"
+          :class="['message-wrapper', msg.from === 'me' ? 'sent' : 'received']"
       >
-        <div class="message-content">
-          <span>{{ msg.content }}</span>
+        <!-- 时间戳 -->
+        <div class="message-timestamp">{{ msg.time }}</div>
+        <!-- 消息气泡 -->
+        <div class="chat-message">
+          <div class="message-content">
+            <span>{{ msg.content }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -42,9 +47,9 @@ const router = useRouter()
 const friendName = '好友A'
 const newMessage = ref('')
 const messages = ref([
-  { from: 'other', content: '你好！' },
-  { from: 'me', content: '你好，最近怎么样？' },
-  { from: 'other', content: '最近工作挺忙的，你呢？' }
+  { from: 'other', content: '你好！', time: '09:00' },
+  { from: 'me', content: '你好，最近怎么样？', time: '09:01' },
+  { from: 'other', content: '最近工作挺忙的，你呢？', time: '09:02' }
 ])
 
 const chatContainer = ref<HTMLDivElement | null>(null)
@@ -57,7 +62,9 @@ const goBack = () => {
 // 发送消息，并自动滚动到底部
 const sendMessage = () => {
   if (!newMessage.value.trim()) return
-  messages.value.push({ from: 'me', content: newMessage.value.trim() })
+  const now = new Date()
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  messages.value.push({ from: 'me', content: newMessage.value.trim(), time })
   newMessage.value = ''
   nextTick(() => {
     if (chatContainer.value) {
@@ -102,25 +109,35 @@ const sendMessage = () => {
   overflow-y: auto;
 }
 
-/* 消息项样式 */
-.chat-message {
+/* 消息 wrapper，设置最大宽度并调整对齐方式 */
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
   margin-bottom: 12px;
   max-width: 70%;
-  display: flex;
+  width: 100%; /* 新增 */
+  align-items: flex-start; /* 默认内容按内容宽度排列，不拉伸 */
+}
+
+.message-wrapper.sent {
+  margin-left: auto; /* 新增 - 关键修改 */
   align-items: flex-end;
 }
 
-.chat-message.sent {
-  align-self: flex-end;
-  justify-content: flex-end;
+/* 时间戳样式 */
+.message-timestamp {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
 }
 
-.chat-message.received {
-  align-self: flex-start;
-  justify-content: flex-start;
+/* 消息气泡 */
+.chat-message {
+  /* 这里不设置宽度，让内容自适应 */
 }
 
 .message-content {
+  display: inline-block;
   padding: 10px 14px;
   border-radius: 8px;
   background-color: #fff;
@@ -128,7 +145,8 @@ const sendMessage = () => {
   word-break: break-word;
 }
 
-.chat-message.sent .message-content {
+/* 我发出的消息样式 */
+.message-wrapper.sent .message-content {
   background-color: #a18cd1;
   color: #fff;
 }

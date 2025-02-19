@@ -7,7 +7,7 @@ const socket = ref<WebSocket | null>(null);
 const initWebSocket = (sessionId: string): Promise<string> => {
     return new Promise((resolve, reject) => {
         // 确认 WebSocket URL 是否正确
-        socket.value = new WebSocket('ws://192.168.1.2:8100/api/post/ws/upload');
+        socket.value = new WebSocket('ws://192.168.1.236:8100/api/post/ws/upload');
 
         socket.value.onopen = () => {
             console.log('WebSocket 连接已建立');

@@ -10,102 +10,192 @@
     <van-tabs v-model:active="activeTab" swipeable>
       <!-- 评论通知 -->
       <van-tab title="评论">
-        <div v-for="item in comments" :key="item.id" class="notification-item">
-          <div class="notification-icon">💬</div>
-          <div class="notification-content">
-            <div class="notification-title">{{ item.title }}</div>
-            <div class="notification-body">{{ item.content }}</div>
-            <div class="notification-time">{{ item.timestamp }}</div>
+        <van-list
+            v-model:loading="loading"
+            :finished="finishedComments"
+            finished-text="没有更多评论了"
+            @load="onLoadComments"
+        >
+          <div v-for="item in comments" :key="item.id" class="notification-item">
+            <div class="notification-icon">💬</div>
+            <div class="notification-content">
+              <div class="notification-title">{{ item.sourceUserName }} 回复了你</div>
+              <div class="notification-body">{{ item.commentContent }}</div>
+              <div class="notification-time">{{ formatDate(item.createTime) }}</div>
+            </div>
           </div>
-        </div>
+        </van-list>
       </van-tab>
 
       <!-- 点赞通知 -->
       <van-tab title="点赞">
-        <div v-for="item in likes" :key="item.id" class="notification-item">
-          <div class="notification-icon">👍</div>
-          <div class="notification-content">
-            <div class="notification-title">{{ item.title }}</div>
-            <div class="notification-body">{{ item.content }}</div>
-            <div class="notification-time">{{ item.timestamp }}</div>
+        <van-list
+            v-model:loading="loading"
+            :finished="finishedLikes"
+            finished-text="没有更多点赞了"
+            @load="onLoadLikes"
+        >
+          <div v-for="item in likes" :key="item.id" class="notification-item">
+            <div class="notification-icon">👍</div>
+            <div class="notification-content">
+              <div class="notification-title">{{ item.sourceUserName }}</div>
+              <div class="notification-body">给你发布的内容点了个赞</div>
+              <div class="notification-time">{{ formatDate(item.createTime) }}</div>
+            </div>
           </div>
-        </div>
+        </van-list>
       </van-tab>
 
       <!-- 收藏通知 -->
       <van-tab title="收藏">
-        <div v-for="item in favorites" :key="item.id" class="notification-item">
-          <div class="notification-icon">⭐</div>
-          <div class="notification-content">
-            <div class="notification-title">{{ item.title }}</div>
-            <div class="notification-body">{{ item.content }}</div>
-            <div class="notification-time">{{ item.timestamp }}</div>
+        <van-list
+            v-model:loading="loading"
+            :finished="finishedFavorites"
+            finished-text="没有更多收藏了"
+            @load="onLoadFavorites"
+        >
+          <div v-for="item in favorites" :key="item.id" class="notification-item">
+            <div class="notification-icon">⭐</div>
+            <div class="notification-content">
+              <div class="notification-title">{{ item.sourceUserName }}</div>
+              <div class="notification-body">收藏了你发布的内容</div>
+              <div class="notification-time">{{ formatDate(item.createTime) }}</div>
+            </div>
           </div>
-        </div>
+        </van-list>
       </van-tab>
     </van-tabs>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
+<script setup>
+import {onMounted, ref} from 'vue'
 import { useRouter } from 'vue-router'
-import { Tab, Tabs } from 'vant'
+import axios from '../../api/axios.ts'
 
 const router = useRouter()
 const activeTab = ref(0)
 
+// 控制各类通知的加载状态
+const loading = ref(false)
+const finishedComments = ref(false)
+const finishedLikes = ref(false)
+const finishedFavorites = ref(false)
+
+// 评论、点赞和收藏数据
+const comments = ref([])
+const likes = ref([])
+const favorites = ref([])
+
+// 当前页码
+const pageComments = ref(1)
+const pageLikes = ref(1)
+const pageFavorites = ref(1)
+
+const formatDate = (dateStr) => {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = ('0' + (date.getMonth() + 1)).slice(-2);
+  const day = ('0' + date.getDate()).slice(-2);
+  const hours = ('0' + date.getHours()).slice(-2);
+  const minutes = ('0' + date.getMinutes()).slice(-2);
+  const seconds = ('0' + date.getSeconds()).slice(-2);
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// 返回上一页
 const goBack = () => {
   router.back()
 }
 
-// 模拟评论通知数据
-const comments = ref([
-  {
-    id: 1,
-    title: '用户A 评论了您的帖子',
-    content: '你的帖子很棒！',
-    timestamp: '2023-08-01 12:00'
-  },
-  {
-    id: 2,
-    title: '用户B 评论了您的帖子',
-    content: '期待更多精彩内容！',
-    timestamp: '2023-08-02 15:30'
+// 获取评论通知数据
+const onLoadComments = async () => {
+  loading.value = true
+  try {
+    const pageRequest = {
+      current: pageComments.value,
+      pageSize: 10,
+      sortField: 'comment'
+    }
+    const response = await axios.post('/api/like_collect/message/listMessage',  pageRequest)
+    const data = response.data
+    const {records} = data;
+    console.log(records);
+    if (records.length === 0) {
+      finishedComments.value = true; // 如果没有数据，标记为已加载完
+    } else {
+      comments.value.push(...records)
+      pageComments.value++
+      finishedComments.value = records.length < 10
+    }
+  } catch (error) {
+    console.error('加载评论通知失败', error)
+  } finally {
+    loading.value = false
   }
-])
+}
 
-// 模拟点赞通知数据
-const likes = ref([
-  {
-    id: 3,
-    title: '用户C 点赞了您的帖子',
-    content: '👍',
-    timestamp: '2023-08-03 10:20'
-  },
-  {
-    id: 4,
-    title: '用户D 点赞了您的帖子',
-    content: '👍',
-    timestamp: '2023-08-04 11:45'
+// 获取点赞通知数据
+const onLoadLikes = async () => {
+  loading.value = true
+  try {
+    const pageRequest = {
+      current: pageLikes.value,
+      pageSize: 10,
+      sortField: 'like'
+    }
+    const response = await axios.post('/api/like_collect/message/listMessage', pageRequest)
+    const data = response.data
+    const {records} = data;
+    console.log(records);
+    if (records.length === 0) {
+      finishedLikes.value = true; // 如果没有数据，标记为已加载完
+    } else {
+      likes.value.push(...records)
+      pageLikes.value++
+      finishedLikes.value = records.length < 10
+    }
+  } catch (error) {
+    console.error('加载点赞通知失败', error)
+  } finally {
+    loading.value = false
   }
-])
+}
 
-// 模拟收藏通知数据
-const favorites = ref([
-  {
-    id: 5,
-    title: '用户E 收藏了您的帖子',
-    content: '⭐',
-    timestamp: '2023-08-05 09:10'
-  },
-  {
-    id: 6,
-    title: '用户F 收藏了您的帖子',
-    content: '⭐',
-    timestamp: '2023-08-06 08:55'
+// 获取收藏通知数据
+const onLoadFavorites = async () => {
+  loading.value = true
+  try {
+    const pageRequest = {
+      current: pageFavorites.value,
+      pageSize: 10,
+      sortField: 'collect'
+    }
+    const response = await axios.post('/api/like_collect/message/listMessage', pageRequest)
+    const data = response.data
+    const {records} = data;
+    console.log(records);
+    if (records.length === 0) {
+      finishedFavorites.value = true; // 如果没有数据，标记为已加载完
+    } else {
+      favorites.value.push(...records)
+      pageFavorites.value++
+      finishedFavorites.value = records.length < 10
+    }
+  } catch (error) {
+    console.error('加载收藏通知失败', error)
+  } finally {
+    loading.value = false
   }
-])
+}
+
+const readMessage = async () => {
+  await axios.post('/api/like_collect/message/readMessage');
+}
+
+onMounted(() => {
+  readMessage();
+})
 </script>
 
 <style scoped>

@@ -13,7 +13,7 @@ export const useSseStore = defineStore('sse', () => {
         //     return; // 防止重复连接
         // }
         console.log('建立 SSE 连接', userId);
-        const eventSource = new EventSource(`http://192.168.1.2:8100/api/like_collect/sse/stream/${userId}`);
+        const eventSource = new EventSource(`http://192.168.1.236:8100/api/like_collect/sse/stream/${userId}`);
 
         eventSource.onopen = () => {
             isConnected.value = true;
