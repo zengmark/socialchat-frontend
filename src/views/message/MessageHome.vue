@@ -44,20 +44,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import {useUserStore} from "../../stores/user.ts";
 
+// WebSocket 实例，假设你已经有一个 WebSocket 连接
+const socket = new WebSocket('ws://192.168.1.236:8100/api/post/ws/chat?roomId=1&userId=9072&targetUserId=5301')
+
+// 路由实例
 const router = useRouter()
 
-// 点击通知入口后跳转到专门的通知页面
-const goToNotificationsPage = () => {
-  router.push('/notifications')
-}
+const userStore = useUserStore();
 
 // 聊天记录数据
 const chats = ref([
-  { id: 1, nickname: '用户A', lastMessage: '你好啊', timestamp: '2023-08-01' },
-  { id: 2, nickname: '用户B', lastMessage: '还好吗?', timestamp: '2023-08-02' },
+  { id: 9072, nickname: '用户A', lastMessage: '你好啊', timestamp: '2023-08-01' },
+  { id: 5301, nickname: '用户B', lastMessage: '还好吗?', timestamp: '2023-08-02' },
   { id: 3, nickname: '用户C', lastMessage: '今天挺好的', timestamp: '2023-08-03' }
 ])
 
@@ -65,8 +67,71 @@ const loading = ref(false)
 const finished = ref(false)
 const page = ref(1)
 
+// WebSocket 消息接收处理
+socket.onopen = () => {
+  console.log('建立连接')
+}
+
+socket.onmessage = (event) => {
+  const newMessage = JSON.parse(event.data)
+
+  // 假设消息格式是：{ senderId, targetId, content, senderName, senderAvatar }
+  const { senderId, targetId, content, senderName, senderAvatar } = newMessage
+
+  // 找到目标聊天记录
+  const targetChat = chats.value.find(chat => chat.id === targetId)
+
+  if (targetChat) {
+    // 如果目标聊天记录存在，更新它的最后一条消息
+    targetChat.lastMessage = content
+    targetChat.timestamp = new Date().toLocaleString()
+
+    // 如果当前是该聊天会话页面，可以更新聊天界面
+    if (router.currentRoute.value.name === 'chat' && router.currentRoute.value.params.chatId === targetId.toString()) {
+      // 直接显示消息在当前聊天框中
+      // 比如调用一个函数将该消息显示在聊天框中
+      appendMessageToChat(content, senderName, senderAvatar)
+    }
+  } else {
+    // 如果该聊天记录不存在，可能是新聊天，加入聊天列表
+    chats.value.push({
+      id: targetId,
+      nickname: senderName,
+      lastMessage: content,
+      timestamp: new Date().toLocaleString()
+    })
+  }
+}
+
+socket.onclose = () => {
+  console.log(`已断开聊天室的连接`)
+}
+
+socket.onerror = (error) => {
+  console.error('WebSocket错误：', error)
+}
+
+// 跳转到聊天页面
+const goToChatPage = async (receiverId: number) => {
+  const userInfo = await userStore.getUserInfo();
+  const userId = userInfo.id;
+
+  // 直接拼接并转换为数字，组成单聊聊天室ID
+  let singleRoomId = userId < receiverId
+      ? Number(`${userId}${receiverId}`)
+      : Number(`${receiverId}${userId}`);
+  router.push(`/chat/${singleRoomId}`)
+}
+
+// 将消息追加到当前聊天界面
+const appendMessageToChat = (content: string, senderName: string, senderAvatar: string) => {
+  // 假设你有一个聊天记录数组或者可以直接操作 DOM 来更新聊天内容
+  // 这里是简单的模拟追加
+  console.log(`New message from ${senderName}: ${content}`)
+}
+
+// 模拟分页加载聊天记录
 const onLoadChats = () => {
-  // 模拟分页加载聊天记录
   setTimeout(() => {
     const moreChats = Array(10)
         .fill(0)
@@ -83,9 +148,9 @@ const onLoadChats = () => {
   }, 1000)
 }
 
-// 跳转到聊天页面
-const goToChatPage = (chatId: number) => {
-  router.push(`/chat/${chatId}`)
+// 点击通知入口后跳转到专门的通知页面
+const goToNotificationsPage = () => {
+  router.push('/notifications')
 }
 </script>
 

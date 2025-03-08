@@ -19,6 +19,11 @@ const routes = [
                 name: 'message',
                 component: () => import('../views/message/MessageHome.vue'),
             },
+            {
+                path: '/chat',  // 动态路由，匹配帖子 ID
+                name: 'chat',
+                component: () => import('../views/message/ChatHome.vue'),
+            },
         ],
     },
     {
@@ -74,6 +79,11 @@ const routes = [
         path: '/notifications',  // 动态路由，匹配帖子 ID
         name: 'notifications',
         component: () => import('../views/message/MessageNotifications.vue'),
+    },
+    {
+        path: '/test',  // 动态路由，匹配帖子 ID
+        name: 'test',
+        component: () => import('../views/test.vue'),
     },
 
 ]

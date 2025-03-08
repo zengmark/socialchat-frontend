@@ -8,7 +8,7 @@
       <template #title>
         <div v-if="isHomePage" class="nav-tabs">
           <span :class="{ active: activeTab === 'follow' }" @click="switchTab('follow')">关注</span>
-          <span :class="{ active: activeTab === 'discover' }" @click="switchTab('discover')">发现</span>
+          <span :class="{ active: activeTab === '' }" @click="switchTab('/')">发现</span>
           <span :class="{ active: activeTab === 'chat' }" @click="switchTab('chat')">聊天</span>
         </div>
         <div v-else>
@@ -75,11 +75,12 @@ watch(() => route.path, () => {
 }, { immediate: true });
 
 // 判断当前路径是否为首页
-const isHomePage = computed(() => route.path === '/');
+const isHomePage = computed(() => (route.path === '/' || route.path === '/chat'));
 
 // 切换顶部导航栏的选项（示例逻辑）
 const switchTab = (tab) => {
   activeTab.value = tab;
+  router.push(tab);
 };
 
 // 底部导航栏跳转

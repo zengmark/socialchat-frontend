@@ -13,6 +13,11 @@
           :key="index"
           :class="['message-wrapper', msg.from === 'me' ? 'sent' : 'received']"
       >
+        <!-- 昵称和头像 -->
+        <div class="message-header">
+          <img :src="msg.avatar" alt="头像" class="message-avatar" />
+          <span class="message-nickname">{{ msg.nickname }}</span>
+        </div>
         <!-- 时间戳 -->
         <div class="message-timestamp">{{ msg.time }}</div>
         <!-- 消息气泡 -->
@@ -39,42 +44,158 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+<script setup>
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {useUserStore} from "../../stores/user.ts";
 
 const router = useRouter()
+const routes = useRoute()
+const userStore = useUserStore();
+
 const friendName = '好友A'
 const newMessage = ref('')
 const messages = ref([
-  { from: 'other', content: '你好！', time: '09:00' },
-  { from: 'me', content: '你好，最近怎么样？', time: '09:01' },
-  { from: 'other', content: '最近工作挺忙的，你呢？', time: '09:02' }
+  // { from: 'other', nickname: '用户A', avatar: 'https://via.placeholder.com/40', content: '你好！', time: '09:00' },
+  // { from: 'me', nickname: '我', avatar: 'https://via.placeholder.com/40', content: '你好，最近怎么样？', time: '09:01' },
+  // { from: 'other', nickname: '用户B', avatar: 'https://via.placeholder.com/40', content: '最近工作挺忙的，你呢？', time: '09:02' }
 ])
+const chatContainer = ref(null)
 
-const chatContainer = ref<HTMLDivElement | null>(null)
+// 新增：用于保存当前 WebSocket 连接的对象
+const socket = ref(null)
+// 新增：保存当前聊天室 ID
+const roomId = ref(null)
 
 // 返回上一页
 const goBack = () => {
   router.back()
 }
 
-// 发送消息，并自动滚动到底部
-const sendMessage = () => {
+const getReceiverId = (singleRoomId, userId) => {
+  const userIdStr = String(userId);
+  const singleRoomIdStr = String(singleRoomId);
+
+  // 如果 singleRoomId 以 userId 开头，则 receiverId 是后面的部分
+  if (singleRoomIdStr.startsWith(userIdStr)) {
+    return Number(singleRoomIdStr.slice(userIdStr.length));
+  }
+
+  // 否则，singleRoomId 以 userId 结尾，则 receiverId 是前面的部分
+  return Number(singleRoomIdStr.slice(0, singleRoomIdStr.length - userIdStr.length));
+}
+
+// 发送消息，并通过 WebSocket 发送数据
+// 发送消息时，包括头像和昵称
+const sendMessage = async () => {
   if (!newMessage.value.trim()) return
+
+  const userInfo = await userStore.getUserInfo();
   const now = new Date()
-  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  messages.value.push({ from: 'me', content: newMessage.value.trim(), time })
+  const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}` // 修改时间格式为 时:分
+
+  const content = newMessage.value;
+
+  // 清空输入框
   newMessage.value = ''
   nextTick(() => {
     if (chatContainer.value) {
       chatContainer.value.scrollTop = chatContainer.value.scrollHeight
     }
   })
+
+  // 修改：如果 WebSocket 处于打开状态，则发送消息
+  if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+    let receiverId = -1;
+    // 说明是单聊，群聊就用-1即可
+    if (roomId.value > userInfo.id) {
+      receiverId = getReceiverId(roomId.value, userInfo.id);
+    }
+    const payload = JSON.stringify({
+      type: 1, // 群聊消息类型
+      content: content,
+      targetId: roomId.value, // 将房间ID作为目标
+      receiverId: receiverId, // 接受者的ID
+      senderId: userInfo.id, // 发送者的ID
+      senderName: userInfo.userName ? userInfo.userName : "用户" + userInfo.id, // 发送者的昵称
+      senderAvatar: userInfo.userAvatar ? userInfo.userAvatar : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg', // 发送者的头像
+    })
+    console.log("发送的消息为", payload);
+    socket.value.send(payload)
+  }
+
+  // 更新本地消息列表
+  messages.value.push({
+    from: 'me',
+    nickname: userInfo.userName ? userInfo.userName : "用户" + userInfo.id,
+    avatar: userInfo.userAvatar ? userInfo.userAvatar : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+    content: content,
+    time: time,
+  })
 }
+
+// 新增：建立连接到指定聊天室的 WebSocket 连接
+const connectToChatRoom = async (roomId) => {
+  // 如果已有连接，则先关闭
+  if (socket.value) {
+    socket.value.close()
+  }
+
+  const userInfo = await userStore.getUserInfo();
+
+  // 修改：建立新的 WebSocket 连接，替换 URL 为实际的服务地址
+  socket.value = new WebSocket(`ws://192.168.1.236:8100/api/post/ws/chat?roomId=${roomId}&userId=9072`)
+
+  socket.value.onopen = () => {
+    console.log(`已连接到聊天室 ${roomId}`)
+  }
+
+  socket.value.onmessage = (event) => {
+    const resp = event.data;
+    const data = JSON.parse(resp);
+    const now = new Date();
+    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`; // 修改时间格式为 时:分
+    console.log("收到消息为:", data)
+    messages.value.push({
+      from: 'other',
+      nickname: data.senderName ? data.senderName : '用户' + data.senderId,
+      avatar: data.senderAvatar ? data.senderAvatar : 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg',
+      content: data.content,
+      time: time // 使用新的时间格式
+    })
+  }
+
+  socket.value.onclose = () => {
+    console.log(`已断开聊天室 ${roomId} 的连接`)
+  }
+
+  socket.value.onerror = (error) => {
+    console.error('WebSocket错误：', error)
+  }
+}
+
+// 修改：组件挂载时建立与聊天室的 WebSocket 连接
+onMounted(() => {
+  console.log("进来了")
+  const roomIdFromRoute = routes.params.id;
+  if (roomIdFromRoute) {
+    roomId.value = Number(roomIdFromRoute)
+    console.log("建立连接：", roomId.value);
+    connectToChatRoom(roomId.value)
+  }
+})
+
+// 修改：组件卸载前关闭 WebSocket 连接，防止资源泄露
+onBeforeUnmount(() => {
+  if (socket.value) {
+    socket.value.close()
+  }
+})
 </script>
 
+
 <style scoped>
+/* 此处保留原有样式 */
 .chat-page {
   display: flex;
   flex-direction: column;
@@ -109,19 +230,38 @@ const sendMessage = () => {
   overflow-y: auto;
 }
 
-/* 消息 wrapper，设置最大宽度并调整对齐方式 */
+/* 消息 wrapper */
 .message-wrapper {
   display: flex;
   flex-direction: column;
   margin-bottom: 12px;
   max-width: 70%;
-  width: 100%; /* 新增 */
-  align-items: flex-start; /* 默认内容按内容宽度排列，不拉伸 */
+  width: 100%;
+  align-items: flex-start;
 }
 
 .message-wrapper.sent {
-  margin-left: auto; /* 新增 - 关键修改 */
+  margin-left: auto;
   align-items: flex-end;
+}
+
+/* 昵称和头像 */
+.message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.message-nickname {
+  font-size: 14px;
+  font-weight: bold;
 }
 
 /* 时间戳样式 */
@@ -133,7 +273,6 @@ const sendMessage = () => {
 
 /* 消息气泡 */
 .chat-message {
-  /* 这里不设置宽度，让内容自适应 */
 }
 
 .message-content {
@@ -145,7 +284,6 @@ const sendMessage = () => {
   word-break: break-word;
 }
 
-/* 我发出的消息样式 */
 .message-wrapper.sent .message-content {
   background-color: #a18cd1;
   color: #fff;
