@@ -5,7 +5,7 @@ import {getToken} from "../utils/auth.ts";
 
 // 创建 axios 实例
 const instance = axios.create({
-    baseURL: 'http://192.168.1.236:8100', // 基础 URL
+    baseURL: 'http://192.168.1.149:8100', // 基础 URL
     timeout: 20000, // 请求超时时间
     headers: {
         'Content-Type': 'application/json',

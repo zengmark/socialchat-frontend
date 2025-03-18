@@ -182,16 +182,30 @@
     </div>
 
     <!-- 评论评论弹窗 -->
-    <van-popup v-model:show="showCommentInput" position="bottom">
-      <div class="comment-input-wrapper">
+    <!-- 优化后的评论回复弹窗 -->
+    <van-popup v-model:show="showCommentInput" position="bottom" class="reply-popup">
+      <!-- 弹窗头部，包含标题和关闭按钮 -->
+      <div class="popup-header">
+        <span class="popup-title">回复评论</span>
+        <van-icon name="cross" size="20" @click="showCommentInput = false" class="popup-close" />
+      </div>
+
+      <!-- 弹窗内容区 -->
+      <div class="popup-content">
         <van-field
             v-model="commentText"
             rows="3"
             autosize
             type="textarea"
             placeholder="写下你的评论..."
+            class="reply-textarea"
         />
-        <van-button type="primary" size="small" @click="submitComment">提交</van-button>
+      </div>
+
+      <!-- 底部操作区 -->
+      <div class="popup-actions">
+        <van-button plain class="btn-cancel" @click="showCommentInput = false">取消</van-button>
+        <van-button type="primary" class="btn-submit" @click="submitComment">提交</van-button>
       </div>
     </van-popup>
 
@@ -1068,4 +1082,57 @@ onMounted(async () => {
   cursor: pointer;
   background: transparent; /* 透明背景 */
 }
+
+/* 优化后的回复弹窗样式 */
+.reply-popup {
+  padding: 15px;
+  background-color: #fff;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 弹窗头部 */
+.reply-popup .popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.reply-popup .popup-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.reply-popup .popup-close {
+  color: #999;
+  cursor: pointer;
+}
+
+/* 弹窗内容区 */
+.reply-popup .popup-content {
+  margin-bottom: 15px;
+}
+
+.reply-popup .reply-textarea .van-field__control {
+  font-size: 14px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+/* 弹窗底部操作区 */
+.reply-popup .popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.reply-popup .popup-actions .van-button {
+  min-width: 70px;
+}
+
 </style>

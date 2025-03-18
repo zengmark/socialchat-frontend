@@ -16,7 +16,7 @@ let socket = null;
 
 const connect = () => {
   // Replace with your backend WebSocket URL
-  socket = new WebSocket('ws://192.168.1.236:8100/api/post/ws/chat');
+  socket = new WebSocket('ws://192.168.1.149:8100/api/post/ws/chat');
   socket.onopen = () => {
     console.log('连接成功');
   };

@@ -15,14 +15,24 @@ const routes = [
                 component: () => import('../views/user/UserMy.vue')
             },
             {
-                path: '/message',  // 动态路由，匹配帖子 ID
+                path: '/message',
                 name: 'message',
                 component: () => import('../views/message/MessageHome.vue'),
             },
             {
-                path: '/chat',  // 动态路由，匹配帖子 ID
+                path: '/chat',
                 name: 'chat',
                 component: () => import('../views/message/ChatHome.vue'),
+            },
+            {
+                path: '/friend',
+                name: 'friend',
+                component: () => import('../views/friend/FriendPage.vue'),
+            },
+            {
+                path: '/follow',
+                name: 'follow',
+                component: () => import('../views/friend/FollowPage.vue'),
             },
         ],
     },
@@ -48,44 +58,48 @@ const routes = [
         props: true,  // 允许组件通过 `props` 方式接收 `id`
     },
     {
-        path: '/search',  // 动态路由，匹配帖子 ID
+        path: '/search',
         name: 'PostSearch',
         component: () => import('../views/post/PostSearch.vue'),
         props: true,  // 允许组件通过 `props` 方式接收 `id`
     },
     {
-        path: '/searchResult',  // 动态路由，匹配帖子 ID
+        path: '/searchResult',
         name: 'PostSearchResult',
         component: () => import('../views/post/PostSearchResult.vue'),
         props: true,  // 允许组件通过 `props` 方式接收 `id`
     },
     {
-        path: '/myPosts',  // 动态路由，匹配帖子 ID
+        path: '/myPosts',
         name: 'myPosts',
         component: () => import('../views/post/PostUserHome.vue'),
     },
     {
-        path: '/mySetting',  // 动态路由，匹配帖子 ID
+        path: '/mySetting',
         name: 'mySetting',
         component: () => import('../views/user/UserSetting.vue'),
     },
     {
-        path: '/chat/:id',  // 动态路由，匹配帖子 ID
+        path: '/favorites',
+        name: 'favorites',
+        component: () => import('../views/post/PostCollect.vue'),
+    },
+    {
+        path: '/chat/:id',
         name: 'ChatPage',
         component: () => import('../views/message/ChatPage.vue'),
         props: true,  // 允许组件通过 `props` 方式接收 `id`
     },
     {
-        path: '/notifications',  // 动态路由，匹配帖子 ID
+        path: '/notifications',
         name: 'notifications',
         component: () => import('../views/message/MessageNotifications.vue'),
     },
     {
-        path: '/test',  // 动态路由，匹配帖子 ID
+        path: '/test',
         name: 'test',
         component: () => import('../views/test.vue'),
-    },
-
+    }
 ]
 
 export default routes;
